@@ -1,0 +1,76 @@
+{
+  "name": "restaurant-order-printer",
+  "version": "1.0.0",
+  "description": "Menuorg Order Print",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "dist": "electron-builder --publish=never",
+    "pack": "electron-builder --dir",
+    "publish": "electron-builder --publish=always"
+  },
+  "build": {
+    "appId": "com.restaurant.orderprinter",
+    "productName": "MenuorgPrint",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "src/**/*",
+      "assets/**/*",
+      "node_modules/**/*"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "cuiD2488",
+        "repo": "menuorg-print"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "MenuorgPrint",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "allowElevation": true,
+      "runAfterFinish": true,
+      "menuCategory": "Restaurant Tools"
+    }
+  },
+  "keywords": [
+    "restaurant",
+    "printing",
+    "order",
+    "electron"
+  ],
+  "author": "Restaurant Team",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^22.3.27",
+    "electron-builder": "^26.0.12"
+  },
+  "dependencies": {
+    "electron-updater": "^6.1.7"
+  }
+}

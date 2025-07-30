@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PrintType 分菜打印测试</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f5f5f5;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      h1,
+      h2 {
+        color: #333;
+        margin-bottom: 20px;
+      }
+
+      .section {
+        margin-bottom: 30px;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background: #fafafa;
+      }
+
+      .config-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+        gap: 10px;
+      }
+
+      .config-row label {
+        min-width: 120px;
+        font-weight: bold;
+      }
+
+      input,
+      select,
+      button {
+        padding: 8px 12px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        cursor: pointer;
+        margin-left: 10px;
+      }
+
+      button:hover {
+        background: #0056b3;
+      }
+
+      button.danger {
+        background: #dc3545;
+      }
+
+      button.danger:hover {
+        background: #c82333;
+      }
+
+      button.success {
+        background: #28a745;
+      }
+
+      button.success:hover {
+        background: #218838;
+      }
+
+      .status {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 5px;
+        font-family: monospace;
+        white-space: pre-wrap;
+      }
+
+      .status.success {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+      }
+
+      .status.error {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+      }
+
+      .status.info {
+        background: #d1ecf1;
+        border: 1px solid #bee5eb;
+        color: #0c5460;
+      }
+
+      .dish-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        padding: 10px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+
+      .dish-item input {
+        margin-left: 10px;
+        width: 60px;
+      }
+
+      .printer-config {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        padding: 10px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+
+      .printer-config input {
+        margin-left: 10px;
+        width: 80px;
+      }
+
+      .highlight {
+        background: #fff3cd !important;
+        border-color: #ffeaa7 !important;
+      }
+
+      .test-order {
+        background: #e9ecef;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+      }
+
+      .test-order h4 {
+        margin: 0 0 10px 0;
+        color: #495057;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🍽️ PrintType 分菜打印测试</h1>
+
+      <div class="section">
+        <h2>📋 功能说明</h2>
+        <p><strong>分菜打印原理：</strong></p>
+        <ul>
+          <li>
+            每个菜品可以设置
+            <code>printer_type</code> 字段（数字，大于0表示要分菜）
+          </li>
+          <li>每台打印机可以设置编号（对应 printer_type 值）</li>
+          <li>打印时，菜品根据 printer_type 分配到对应编号的打印机</li>
+          <li>没有编号的打印机打印完整订单</li>
+          <li>没有 printer_type 或 printer_type=0 的菜品归入完整订单</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>🖨️ 打印机管理</h2>
+        <div class="config-row">
+          <button onclick="initPrinter()">初始化打印机</button>
+          <button onclick="refreshPrinters()">刷新打印机列表</button>
+          <button onclick="showPrinterStatus()">查看状态</button>
+        </div>
+        <div id="printerList"></div>
+      </div>
+
+      <div class="section">
+        <h2>🔧 分菜打印配置</h2>
+        <div class="config-row">
+          <label>分菜模式:</label>
+          <select
+            id="separateMode"
+            title="选择分菜打印模式"
+            onchange="updateSeparateMode()"
+          >
+            <option value="false">禁用</option>
+            <option value="true">启用</option>
+          </select>
+          <button onclick="showConfig()">查看配置</button>
+          <button class="danger" onclick="resetConfig()">重置配置</button>
+        </div>
+        <div id="printerConfig"></div>
+      </div>
+
+      <div class="section">
+        <h2>🍜 测试订单</h2>
+        <div class="test-order">
+          <h4>订单 #12345</h4>
+          <div id="dishList"></div>
+          <div class="config-row" style="margin-top: 15px">
+            <button class="success" onclick="testPrint()">测试分菜打印</button>
+            <button onclick="testPreview()">预览打印</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>📊 打印结果</h2>
+        <div id="printResult" class="status info">等待打印测试...</div>
+      </div>
+    </div>
+
+    <!-- 引入 C-Lodop 脚本 -->
+    <script language="javascript" src="./CLodopfuncs.js"></script>
+    <script language="javascript" src="./src/printer-lodop.js"></script>
+
+    <script>
+      let printerManager = null;
+
+      // 测试订单数据
+      const testOrder = {
+        order_id: '12345',
+        create_time: new Date().toISOString(),
+        delivery_time: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        paystyle: 1,
+        recipient_name: '张三',
+        recipient_phone: '13800138000',
+        delivery_type: 2,
+        sub_total: 45.5,
+        tax_fee: 3.64,
+        tip_fee: 5.0,
+        total: 54.14,
+        order_notes: '不要香菜，多放辣椒',
+        dishes_array: [
+          {
+            dishes_name: '宫保鸡丁',
+            price: '18.50',
+            amount: '1',
+            remark: '微辣，不要花生',
+            printer_type: '1', // 热菜，分配给1号打印机
+          },
+          {
+            dishes_name: '麻婆豆腐',
+            price: '16.00',
+            amount: '1',
+            remark: '中辣',
+            printer_type: '1', // 热菜，分配给1号打印机
+          },
+          {
+            dishes_name: '凉拌黄瓜',
+            price: '8.00',
+            amount: '1',
+            remark: '多放蒜',
+            printer_type: '2', // 凉菜，分配给2号打印机
+          },
+          {
+            dishes_name: '银耳莲子汤',
+            price: '12.00',
+            amount: '2',
+            remark: '温热',
+            printer_type: '3', // 汤品，分配给3号打印机
+          },
+          {
+            dishes_name: '米饭',
+            price: '3.00',
+            amount: '2',
+            remark: '',
+            printer_type: '0', // 主食，不分菜，完整订单
+          },
+        ],
+      };
+
+      // 初始化打印机
+      async function initPrinter() {
+        try {
+          updateStatus('正在初始化打印机...', 'info');
+
+          printerManager = new LodopPrinterManager();
+          const result = await printerManager.init();
+
+          if (result.success) {
+            updateStatus(`打印机初始化成功！引擎: ${result.engine}`, 'success');
+            await refreshPrinters();
+            renderDishList();
+          } else {
+            updateStatus(`打印机初始化失败: ${result.error}`, 'error');
+          }
+        } catch (error) {
+          updateStatus(`初始化异常: ${error.message}`, 'error');
+        }
+      }
+
+      // 刷新打印机列表
+      async function refreshPrinters() {
+        if (!printerManager) {
+          updateStatus('请先初始化打印机', 'error');
+          return;
+        }
+
+        try {
+          const printers = await printerManager.refreshPrinters();
+          renderPrinterList(printers);
+          renderPrinterConfig(printers);
+          updateStatus(`发现 ${printers.length} 台打印机`, 'success');
+        } catch (error) {
+          updateStatus(`刷新打印机失败: ${error.message}`, 'error');
+        }
+      }
+
+      // 渲染打印机列表
+      function renderPrinterList(printers) {
+        const container = document.getElementById('printerList');
+        container.innerHTML = '';
+
+        printers.forEach((printer, index) => {
+          const div = document.createElement('div');
+          div.className = 'printer-config';
+          div.innerHTML = `
+                    <input type="checkbox" id="printer_${index}" ${
+            printer.isDefault ? 'checked' : ''
+          }
+                           onchange="togglePrinter('${
+                             printer.name
+                           }', this.checked)">
+                    <label for="printer_${index}">${printer.name}</label>
+                    <span style="margin-left: 10px; color: #666;">
+                        (${printer.width}mm, ${printer.engine})
+                    </span>
+                `;
+          container.appendChild(div);
+        });
+
+        // 默认选择第一台打印机
+        if (printers.length > 0) {
+          printerManager.setSelectedPrinters([printers[0].name]);
+        }
+      }
+
+      // 渲染打印机编号配置
+      function renderPrinterConfig(printers) {
+        const container = document.getElementById('printerConfig');
+        container.innerHTML = '<h4>打印机编号设置:</h4>';
+
+        printers.forEach((printer, index) => {
+          const div = document.createElement('div');
+          div.className = 'printer-config';
+          div.innerHTML = `
+                    <label>${printer.name}:</label>
+                    <input type="number" id="number_${index}" min="0" max="99"
+                           placeholder="编号" value="${
+                             printer.printerNumber || ''
+                           }"
+                           onchange="setPrinterNumber('${
+                             printer.name
+                           }', this.value)">
+                    <span style="margin-left: 10px; color: #666; font-size: 12px;">
+                        (0=不分菜，1-99=printType编号)
+                    </span>
+                `;
+          container.appendChild(div);
+        });
+      }
+
+      // 渲染菜品列表
+      function renderDishList() {
+        const container = document.getElementById('dishList');
+        container.innerHTML = '';
+
+        testOrder.dishes_array.forEach((dish, index) => {
+          const div = document.createElement('div');
+          div.className = 'dish-item';
+          div.innerHTML = `
+                    <span style="flex: 1;">${dish.dishes_name} - $${
+            dish.price
+          }</span>
+                    <label>printer_type:</label>
+                    <input type="number" min="0" max="99" value="${
+                      dish.printer_type
+                    }"
+                           onchange="updateDishPrintType(${index}, this.value)">
+                    <span style="margin-left: 10px; color: #666; font-size: 12px;">
+                        ${getPrintTypeDescription(dish.printer_type)}
+                    </span>
+                `;
+          container.appendChild(div);
+        });
+      }
+
+      // 获取 printer_type 描述
+      function getPrintTypeDescription(printer_type) {
+        const type = parseInt(printer_type);
+        if (type === 0) return '(完整订单)';
+        if (type === 1) return '(热菜)';
+        if (type === 2) return '(凉菜)';
+        if (type === 3) return '(汤品)';
+        return `(类型${type})`;
+      }
+
+      // 切换打印机选择
+      function togglePrinter(printerName, selected) {
+        if (!printerManager) return;
+
+        const currentSelected = printerManager.getSelectedPrinters();
+        let newSelected;
+
+        if (selected) {
+          newSelected = [...currentSelected, printerName];
+        } else {
+          newSelected = currentSelected.filter((name) => name !== printerName);
+        }
+
+        printerManager.setSelectedPrinters(newSelected);
+        updateStatus(`已选择打印机: ${newSelected.join(', ')}`, 'info');
+      }
+
+      // 设置打印机编号
+      function setPrinterNumber(printerName, number) {
+        if (!printerManager) return;
+
+        const num = parseInt(number) || null;
+        if (printerManager.setPrinterNumber(printerName, num)) {
+          updateStatus(
+            `设置打印机编号成功: ${printerName} -> ${num || '无编号'}`,
+            'success'
+          );
+        } else {
+          updateStatus(`设置打印机编号失败: ${printerName}`, 'error');
+        }
+      }
+
+      // 更新菜品 printer_type
+      function updateDishPrintType(index, printer_type) {
+        testOrder.dishes_array[index].printer_type = printer_type;
+        renderDishList(); // 重新渲染以更新描述
+        updateStatus(
+          `更新菜品 printer_type: ${testOrder.dishes_array[index].dishes_name} -> ${printer_type}`,
+          'info'
+        );
+      }
+
+      // 更新分菜模式
+      function updateSeparateMode() {
+        if (!printerManager) return;
+
+        const enabled =
+          document.getElementById('separateMode').value === 'true';
+        printerManager.setSeparatePrintingMode(enabled);
+        updateStatus(`分菜打印模式: ${enabled ? '已启用' : '已禁用'}`, 'info');
+      }
+
+      // 显示配置
+      function showConfig() {
+        if (!printerManager) {
+          updateStatus('请先初始化打印机', 'error');
+          return;
+        }
+
+        const config = printerManager.getPrintTypeConfig();
+        const configText = `当前配置:
+分菜模式: ${config.enableSeparatePrinting ? '启用' : '禁用'}
+打印机编号: ${JSON.stringify(config.printerNumbers, null, 2)}
+可用打印机: ${config.availablePrinters
+          .map((p) => `${p.name}(编号:${p.number || '无'})`)
+          .join(', ')}`;
+
+        updateStatus(configText, 'info');
+      }
+
+      // 重置配置
+      function resetConfig() {
+        if (!printerManager) return;
+
+        printerManager.resetPrintTypeConfig();
+        document.getElementById('separateMode').value = 'false';
+
+        // 重置界面
+        const inputs = document.querySelectorAll(
+          '#printerConfig input[type="number"]'
+        );
+        inputs.forEach((input) => (input.value = ''));
+
+        updateStatus('分菜打印配置已重置', 'success');
+      }
+
+      // 显示打印机状态
+      function showPrinterStatus() {
+        if (!printerManager) {
+          updateStatus('请先初始化打印机', 'error');
+          return;
+        }
+
+        const status = printerManager.getEngineStatus();
+        const debugInfo = printerManager.getDebugInfo();
+
+        const statusText = `打印机状态:
+引擎: ${status.currentEngine}
+C-Lodop可用: ${status.lodopAvailable}
+初始化状态: ${status.isInitialized}
+版本: ${status.version}
+打印机数量: ${status.printerCount}
+已选择数量: ${status.selectedCount}
+
+调试信息:
+${JSON.stringify(debugInfo, null, 2)}`;
+
+        updateStatus(statusText, 'info');
+      }
+
+      // 测试打印
+      async function testPrint() {
+        if (!printerManager) {
+          updateStatus('请先初始化打印机', 'error');
+          return;
+        }
+
+        try {
+          updateStatus('正在执行分菜打印测试...', 'info');
+
+          const result = await printerManager.printOrder(testOrder);
+
+          const resultText = `分菜打印测试完成:
+成功数量: ${result.成功数量}
+失败数量: ${result.失败数量}
+打印引擎: ${result.打印引擎}
+分菜模式: ${result.分菜模式}
+
+打印详情:
+${result.打印详情
+  .map(
+    (detail) =>
+      `- ${detail.printer}: ${detail.success ? '成功' : '失败'} (${
+        detail.type
+      }, ${detail.dishCount}个菜品${
+        detail.printer_type ? ', printer_type:' + detail.printer_type : ''
+      })`
+  )
+  .join('\n')}
+
+${
+  result.错误列表.length > 0 ? '\n错误列表:\n' + result.错误列表.join('\n') : ''
+}`;
+
+          updateStatus(resultText, result.失败数量 > 0 ? 'error' : 'success');
+        } catch (error) {
+          updateStatus(`打印测试异常: ${error.message}`, 'error');
+        }
+      }
+
+      // 预览打印
+      async function testPreview() {
+        if (!printerManager) {
+          updateStatus('请先初始化打印机', 'error');
+          return;
+        }
+
+        try {
+          updateStatus('正在生成打印预览...', 'info');
+
+          const result = await printerManager.generatePrintPreview(testOrder);
+
+          if (result.success) {
+            updateStatus('打印预览已生成，请查看预览窗口', 'success');
+          } else {
+            updateStatus('预览生成失败', 'error');
+          }
+        } catch (error) {
+          updateStatus(`预览异常: ${error.message}`, 'error');
+        }
+      }
+
+      // 更新状态显示
+      function updateStatus(message, type = 'info') {
+        const statusDiv = document.getElementById('printResult');
+        statusDiv.textContent = message;
+        statusDiv.className = `status ${type}`;
+        console.log(`[STATUS-${type.toUpperCase()}] ${message}`);
+      }
+
+      // 页面加载完成后自动初始化
+      window.addEventListener('load', () => {
+        updateStatus('页面加载完成，请点击"初始化打印机"开始测试', 'info');
+      });
+    </script>
+  </body>
+</html>

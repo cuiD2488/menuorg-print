@@ -1,0 +1,190 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build application
+        run: npm run build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload artifacts (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-installer
+          path: dist/*.exe
+      
+      - name: Upload artifacts (macOS)
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v3
+        with:
+          name: macos-installer
+          path: dist/*.dmg
+      
+      - name: Upload artifacts (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-installer
+          path: dist/*.AppImage
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+      
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: MenuorgPrint ${{ github.ref_name }}
+          body: |
+            ## 🎉 MenuorgPrint ${{ github.ref_name }}
+            
+            ### 📦 安装包下载
+            
+            - **Windows**: MenuorgPrint-Setup-${{ github.ref_name }}.exe
+            - **macOS**: MenuorgPrint-${{ github.ref_name }}.dmg  
+            - **Linux**: MenuorgPrint-${{ github.ref_name }}.AppImage
+            
+            ### 🔄 自动更新
+            
+            如果您已安装旧版本，应用会自动检测并提示更新到此版本。
+            
+            ### 🐛 问题反馈
+            
+            如有问题请访问 [Issues](https://github.com/${{ github.repository }}/issues) 页面反馈。
+            
+            ---
+            
+            *构建时间: ${{ github.run_id }}*
+          draft: false
+          prerelease: false
+      
+      - name: Upload Windows Installer
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./windows-installer/MenuorgPrint-Setup-*.exe
+          asset_name: MenuorgPrint-Setup-${{ github.ref_name }}.exe
+          asset_content_type: application/octet-stream
+      
+      - name: Upload macOS Installer
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./macos-installer/MenuorgPrint-*.dmg
+          asset_name: MenuorgPrint-${{ github.ref_name }}.dmg
+          asset_content_type: application/octet-stream
+      
+      - name: Upload Linux Installer
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./linux-installer/MenuorgPrint-*.AppImage
+          asset_name: MenuorgPrint-${{ github.ref_name }}.AppImage
+          asset_content_type: application/octet-stream
+
+  auto-update:
+    needs: release
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Generate update metadata
+        run: |
+          # 生成 latest.yml 文件供自动更新使用
+          cat > latest.yml << EOF
+          version: ${{ github.ref_name }}
+          files:
+            - url: MenuorgPrint-Setup-${{ github.ref_name }}.exe
+              sha512: $(sha512sum dist/*.exe | cut -d' ' -f1)
+              size: $(stat -c%s dist/*.exe)
+          path: MenuorgPrint-Setup-${{ github.ref_name }}.exe
+          sha512: $(sha512sum dist/*.exe | cut -d' ' -f1)
+          releaseDate: $(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ")
+          EOF
+      
+      - name: Upload update metadata
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.release.outputs.upload_url }}
+          asset_path: ./latest.yml
+          asset_name: latest.yml
+          asset_content_type: text/yaml 

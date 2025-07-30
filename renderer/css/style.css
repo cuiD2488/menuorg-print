@@ -1,0 +1,1742 @@
+/* 基础样式重置 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #333;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+.section {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* 按钮样式 */
+button {
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 20px;
+    transition: all 0.3s ease;
+    background: #667eea;
+    color: white;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+    margin-left: 10px;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.btn-danger {
+    background: #dc3545;
+}
+
+.btn-warning {
+    background: #ffc107;
+    color: #212529;
+}
+
+.btn-warning:hover {
+    background: #e0a800;
+}
+
+/* 登录界面 */
+#loginSection {
+    max-width: 450px;
+    margin: 10vh auto;
+}
+
+.login-container h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #2c3e50;
+    font-size: 28px;
+    font-weight: 600;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #555;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.form-group button {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+}
+
+.login-status {
+    margin-top: 15px;
+    text-align: center;
+    font-size: 14px;
+    min-height: 20px;
+}
+
+.login-status.error {
+    color: #dc3545;
+}
+
+.login-status.success {
+    color: #28a745;
+}
+
+/* 主界面 */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.header h1 {
+    color: #2c3e50;
+    font-size: 32px;
+    font-weight: 700;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 14px;
+    color: #666;
+}
+
+.content {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 30px;
+    /* height: calc(100vh - 200px); */
+}
+
+/* 左侧面板 */
+.left-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.config-panel,
+.status-panel {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+}
+
+.config-panel h3,
+.status-panel h3 {
+    margin-bottom: 20px;
+    color: #2c3e50;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.printer-config select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    background: white;
+    font-size: 14px;
+}
+
+.printer-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.printer-actions button {
+    flex: 1;
+}
+
+/* 复选框 */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-weight: 500;
+    color: #555;
+}
+
+.checkbox-label input[type="checkbox"] {
+    display: none;
+}
+
+.checkmark {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    position: relative;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.checkbox-label input[type="checkbox"]:checked+.checkmark {
+    background: #667eea;
+    border-color: #667eea;
+}
+
+.checkbox-label input[type="checkbox"]:checked+.checkmark:after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 1px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+/* 状态面板 */
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 14px;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.status-disconnected {
+    background: #fff3cd;
+    color: #856404;
+}
+
+/* 订单面板 */
+.orders-panel {
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.orders-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 20px 0;
+    margin-bottom: 20px;
+}
+
+.orders-header h3 {
+    color: #2c3e50;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.orders-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.orders-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 20px 20px;
+}
+
+.no-orders {
+    text-align: center;
+    color: #999;
+    font-style: italic;
+    padding: 40px 20px;
+}
+
+.order-item {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.order-item:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.order-id {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 15px;
+}
+
+.order-time {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.order-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.order-customer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.customer-name {
+    font-weight: 500;
+    color: #495057;
+}
+
+.delivery-type {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #e9ecef;
+    color: #495057;
+}
+
+.order-summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.order-amount {
+    font-weight: 600;
+    color: #28a745;
+    font-size: 16px;
+}
+
+.order-items {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.order-status {
+    margin-bottom: 12px;
+}
+
+.order-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+/* 订单状态标签 */
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+    display: inline-block;
+}
+
+.status-pending {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.status-confirmed {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #b3d9e6;
+}
+
+.status-cooking {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f1aeb5;
+}
+
+.status-ready {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status-delivery {
+    background: #cce5ff;
+    color: #004085;
+    border: 1px solid #99d5ff;
+}
+
+.status-completed {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status-cancelled {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f1aeb5;
+}
+
+.status-unknown {
+    background: #e2e3e5;
+    color: #383d41;
+    border: 1px solid #d6d8db;
+}
+
+/* 订单详情样式 */
+.order-detail-content {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.order-detail-content h4 {
+    color: #2c3e50;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.order-basic-info,
+.customer-info,
+.dishes-info,
+.payment-info,
+.order-notes {
+    margin-bottom: 24px;
+    background: #f8f9fa;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+}
+
+.info-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.info-item label {
+    font-weight: 500;
+    color: #495057;
+    margin-right: 8px;
+}
+
+.info-item span {
+    color: #2c3e50;
+    text-align: right;
+}
+
+/* 商品表格 */
+.dishes-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.dishes-table th,
+.dishes-table td {
+    padding: 12px 8px;
+    text-align: left;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.dishes-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #495057;
+    font-size: 13px;
+}
+
+.dishes-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.dish-name {
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.dish-qty {
+    text-align: center;
+    font-weight: 500;
+}
+
+.dish-price,
+.dish-total {
+    text-align: right;
+    font-weight: 500;
+    color: #28a745;
+}
+
+.dish-remark {
+    font-size: 12px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* 菜品规格样式 */
+.dish-name {
+    position: relative;
+}
+
+.dish-name-main {
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.has-specs-indicator {
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.dish-specs-row {
+    background: #f8f9fa;
+    display: none;
+    /* 默认隐藏，通过JavaScript控制显示 */
+}
+
+.dish-specs-row.show {
+    display: table-row;
+}
+
+.dish-specs {
+    padding: 8px 12px;
+    border-left: 3px solid #17a2b8;
+    font-size: 13px;
+    color: #495057;
+    background: linear-gradient(90deg, #f8f9fa 0%, #ffffff 100%);
+}
+
+.specs-label {
+    font-weight: 600;
+    color: #17a2b8;
+    margin-right: 8px;
+}
+
+.specs-toggle {
+    color: #17a2b8;
+    cursor: pointer;
+    font-size: 12px;
+    text-decoration: underline;
+    padding: 2px 6px;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+}
+
+.specs-toggle:hover {
+    background: #e3f2fd;
+    color: #0277bd;
+}
+
+.dish-actions {
+    text-align: center;
+    width: 60px;
+}
+
+/* 费用明细 */
+.payment-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+.payment-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.payment-item:last-child {
+    border-bottom: none;
+}
+
+.payment-item.total {
+    padding-top: 12px;
+    border-top: 2px solid #e9ecef;
+    font-weight: 600;
+    font-size: 16px;
+    color: #2c3e50;
+}
+
+.payment-item label {
+    font-weight: 500;
+    color: #495057;
+}
+
+.payment-item span {
+    font-weight: 500;
+    color: #28a745;
+}
+
+/* 加载和错误状态 */
+.loading {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.error {
+    text-align: center;
+    padding: 40px 20px;
+    color: #dc3545;
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 8px;
+}
+
+/* 刷新按钮在no-orders中的样式 */
+.no-orders .btn-small {
+    background: #6c757d;
+    color: white;
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.no-orders .btn-small:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .order-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .order-actions {
+        justify-content: flex-start;
+    }
+
+    .dishes-table {
+        font-size: 12px;
+    }
+
+    .dishes-table th,
+    .dishes-table td {
+        padding: 8px 6px;
+    }
+}
+
+/* 新的订单界面样式 */
+.btn-info {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-info:hover {
+    background: #138496;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .content {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .modal-large .modal-content {
+        width: 95%;
+    }
+}
+
+/* 打印机列表样式 */
+.printer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #e1e5e9;
+}
+
+.printer-header span {
+    font-weight: 600;
+    color: #495057;
+}
+
+.header-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.header-actions .btn-small {
+    padding: 4px 8px;
+    font-size: 11px;
+    min-width: auto;
+}
+
+.printer-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    background: #f8f9fa;
+    margin-bottom: 15px;
+}
+
+.printer-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid #e9ecef;
+    transition: background-color 0.2s ease;
+    background: white;
+}
+
+.printer-item:last-child {
+    border-bottom: none;
+}
+
+.printer-item:hover {
+    background: #f1f3f4;
+}
+
+.printer-item.selected {
+    background: #e3f2fd;
+    border-left: 3px solid #2196f3;
+}
+
+.printer-checkbox {
+    margin-right: 12px;
+}
+
+.printer-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+}
+
+.printer-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.printer-name {
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 2px;
+}
+
+.printer-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.printer-detail-item {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 12px;
+    background: #e9ecef;
+    color: #6c757d;
+}
+
+.printer-detail-item.width {
+    background: #d4edda;
+    color: #155724;
+}
+
+.printer-detail-item.thermal {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.printer-detail-item.default {
+    background: #cce5ff;
+    color: #004085;
+}
+
+.printer-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+
+.printer-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #6c757d;
+}
+
+.printer-status-dot.enabled {
+    background: #28a745;
+}
+
+.printer-status-dot.ready {
+    background: #17a2b8;
+}
+
+.printer-status-dot.error {
+    background: #dc3545;
+}
+
+.printer-status-text {
+    font-size: 11px;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.printer-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-left: 10px;
+}
+
+.printer-font-size {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.font-size-selector {
+    font-size: 10px;
+    padding: 1px 4px;
+    border: 1px solid #dee2e6;
+    border-radius: 3px;
+    background: white;
+    width: 45px;
+}
+
+.loading-text {
+    text-align: center;
+    padding: 20px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.no-printers {
+    text-align: center;
+    padding: 30px 20px;
+    color: #6c757d;
+}
+
+.no-printers .icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+    opacity: 0.6;
+}
+
+/* 打印机选择摘要 */
+.printer-selection-summary {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    font-size: 13px;
+}
+
+.summary-title {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 4px;
+}
+
+.summary-content {
+    color: #6c757d;
+}
+
+.summary-count {
+    color: #007bff;
+    font-weight: 600;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .printer-item {
+        padding: 10px;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .printer-status {
+        margin-left: 0;
+        margin-top: 8px;
+    }
+
+    .printer-controls {
+        margin-left: 0;
+        margin-top: 8px;
+        flex-direction: row;
+    }
+}
+
+/* 模态框基本样式 */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e9ecef;
+    background: #f8f9fa;
+}
+
+.modal-header h3 {
+    color: #2c3e50;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.close {
+    font-size: 24px;
+    cursor: pointer;
+    color: #999;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.close:hover {
+    background: #e9ecef;
+    color: #333;
+}
+
+.modal-body {
+    padding: 24px;
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    padding: 20px 24px;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    background: #f8f9fa;
+}
+
+/* 加载覆盖层 */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.loading-spinner {
+    text-align: center;
+    color: white;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 16px;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* 托盘相关提示 */
+.tray-notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #28a745;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 10000;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* 🍽️ 分菜打印配置样式 */
+.dish-print-config {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    margin-top: 20px;
+}
+
+.dish-print-config h4 {
+    margin-bottom: 15px;
+    color: #2c3e50;
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.config-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    gap: 10px;
+}
+
+.btn-help {
+    background: #17a2b8;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    padding: 0;
+    font-size: 12px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+}
+
+.btn-help:hover {
+    background: #138496;
+}
+
+.printer-number-config {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #dee2e6;
+}
+
+.config-section-title {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 12px;
+    font-size: 14px;
+}
+
+.printer-number-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.printer-number-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    gap: 10px;
+}
+
+.printer-number-item label {
+    flex: 1;
+    font-weight: 500;
+    color: #495057;
+    font-size: 13px;
+}
+
+.printer-number-item input[type="number"] {
+    width: 80px;
+    padding: 6px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 13px;
+    text-align: center;
+}
+
+.printer-number-item input[type="number"]:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.25);
+}
+
+.printer-number-item .number-hint {
+    font-size: 11px;
+    color: #6c757d;
+    margin-left: 5px;
+}
+
+.config-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #1e7e34;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+/* 状态指示器样式 */
+.status-enabled {
+    background: #28a745;
+    color: white;
+}
+
+.status-disabled {
+    background: #6c757d;
+    color: white;
+}
+
+/* 帮助模态框样式 */
+.help-content {
+    line-height: 1.6;
+    color: #495057;
+}
+
+.help-content h4 {
+    color: #2c3e50;
+    margin: 20px 0 10px 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.help-content h4:first-child {
+    margin-top: 0;
+}
+
+.help-content p {
+    margin-bottom: 15px;
+}
+
+.help-content ul,
+.help-content ol {
+    margin-bottom: 15px;
+    padding-left: 20px;
+}
+
+.help-content li {
+    margin-bottom: 8px;
+}
+
+.help-content code {
+    background: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 13px;
+    color: #e83e8c;
+}
+
+.help-content strong {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .config-actions {
+        flex-direction: column;
+    }
+
+    .config-actions .btn-small {
+        width: 100%;
+        text-align: center;
+    }
+
+    .printer-number-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .printer-number-item input[type="number"] {
+        width: 100%;
+    }
+}
+
+/* 🌍 语言配置样式 */
+.language-config {
+    margin: 20px 0;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+}
+
+.language-config h4 {
+    margin-bottom: 20px;
+    color: #2c3e50;
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.language-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.language-options .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.language-options .checkbox-label:hover {
+    border-color: #667eea;
+    background: #f8f9ff;
+}
+
+.language-options .checkbox-label input[type="checkbox"]:checked+.checkmark {
+    background: #667eea;
+    border-color: #667eea;
+}
+
+.language-options .checkbox-label input[type="checkbox"]:checked+.checkmark+span {
+    font-weight: 600;
+    color: #667eea;
+}
+
+.config-description {
+    margin: 15px 0;
+    padding: 15px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+.description-text {
+    font-size: 13px;
+    color: #555;
+    line-height: 1.5;
+}
+
+.description-text ul {
+    margin: 10px 0 0 20px;
+    padding: 0;
+}
+
+.description-text li {
+    margin: 6px 0;
+    color: #666;
+}
+
+.description-text strong {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.config-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.config-actions .btn-small {
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* 语言配置状态指示 */
+.language-status {
+    margin: 10px 0;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.language-status.dual {
+    background: #e3f2fd;
+    color: #1976d2;
+    border: 1px solid #bbdefb;
+}
+
+.language-status.english-only {
+    background: #f3e5f5;
+    color: #7b1fa2;
+    border: 1px solid #e1bee7;
+}
+
+.language-status.chinese-only {
+    background: #fff3e0;
+    color: #ef6c00;
+    border: 1px solid #ffcc02;
+}
+
+.language-status.none {
+    background: #ffebee;
+    color: #c62828;
+    border: 1px solid #ffcdd2;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .language-options {
+        gap: 8px;
+    }
+
+    .language-options .checkbox-label {
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+
+    .config-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .config-actions .btn-small {
+        width: 100%;
+    }
+}
+
+/* 🚀 开机自动运行配置样式 */
+.auto-start-config {
+    margin: 15px 0;
+    padding: 15px;
+    background: #fff3e0;
+    border: 2px solid #ffcc02;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.auto-start-config:hover {
+    background: #ffeaa7;
+    border-color: #fdcb6e;
+}
+
+.auto-start-config .checkbox-label {
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #d68910;
+}
+
+.auto-start-config .checkbox-label input[type="checkbox"]:checked+.checkmark {
+    background: #f39c12;
+    border-color: #f39c12;
+}
+
+.auto-start-config .config-description {
+    margin: 8px 0 0 28px;
+    font-size: 11px;
+    color: #7d6608;
+    line-height: 1.4;
+    font-style: italic;
+    display: block;
+}
+
+/* 自动打印配置样式增强 */
+.auto-print-config {
+    margin: 15px 0;
+    padding: 15px;
+    background: #e8f5e8;
+    border: 2px solid #4caf50;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.auto-print-config:hover {
+    background: #d4edda;
+    border-color: #28a745;
+}
+
+.auto-print-config .checkbox-label {
+    font-weight: 600;
+    color: #2e7d32;
+}
+
+.auto-print-config .checkbox-label input[type="checkbox"]:checked+.checkmark {
+    background: #4caf50;
+    border-color: #4caf50;
+}
+
+/* 🔔 通知动画样式 */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    transition: all 0.3s ease;
+}
+
+.notification-success {
+    background: #4CAF50;
+    border-left: 4px solid #2E7D32;
+}
+
+.notification-error {
+    background: #f44336;
+    border-left: 4px solid #c62828;
+}
+
+.notification-warning {
+    background: #ff9800;
+    border-left: 4px solid #f57c00;
+}
+
+.notification-info {
+    background: #2196F3;
+    border-left: 4px solid #1565C0;
+}
+
+/* 🌍 双语菜名显示样式 */
+.dish-name-line {
+    margin-bottom: 2px;
+}
+
+.dish-name-line.first-line {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.dish-name-line.additional-line {
+    font-weight: 400;
+    color: #6c757d;
+    font-size: 0.9em;
+    margin-left: 4px;
+}
+
+/* 双语模式下的菜名容器样式 */
+.dish-name {
+    line-height: 1.4;
+}
+
+.dish-name-main {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+/* 🔧 规格项样式 - 每个规格独占行 */
+.spec-item {
+    margin-bottom: 4px;
+    padding: 2px 0;
+    color: #6c757d;
+    font-size: 0.9em;
+    line-height: 1.3;
+}
+
+.spec-item:last-child {
+    margin-bottom: 0;
+}
+
+/* 🔄 自动更新样式 */
+.update-section {
+    margin-top: 20px;
+}
+
+.update-info {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 10px;
+}
+
+.update-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.update-item:last-child {
+    margin-bottom: 0;
+}
+
+.update-item label {
+    font-weight: 500;
+    color: #555;
+    min-width: 80px;
+}
+
+.update-item span {
+    color: #333;
+    font-weight: 400;
+}
+
+.update-actions {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.update-actions button {
+    font-size: 12px;
+    padding: 6px 12px;
+    min-width: 80px;
+}
+
+/* 更新状态样式 */
+#updateStatus.status-checking {
+    color: #007bff;
+    font-weight: 500;
+}
+
+#updateStatus.status-available {
+    color: #28a745;
+    font-weight: 500;
+}
+
+#updateStatus.status-ready {
+    color: #ffc107;
+    font-weight: 500;
+}
+
+#updateStatus.status-latest {
+    color: #6c757d;
+    font-weight: 400;
+}
+
+/* 更新按钮样式 */
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #218838;
+}
+
+.btn-success:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* 当前版本显示 */
+#currentVersion {
+    font-family: 'Courier New', monospace;
+    background: #e9ecef;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+}

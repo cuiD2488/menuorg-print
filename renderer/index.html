@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Menuorg Order Print</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <!-- Login Section -->
+      <div id="loginSection" class="section">
+        <div class="login-container">
+          <h2>User Login</h2>
+          <form id="loginForm">
+            <div class="form-group">
+              <label for="username">Username:</label>
+              <input
+                type="text"
+                id="username"
+                required
+                placeholder="Enter username"
+              />
+            </div>
+            <div class="form-group">
+              <label for="password">Password:</label>
+              <input
+                type="password"
+                id="password"
+                required
+                placeholder="Enter password"
+              />
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="rememberLogin" />
+                <span class="checkmark"></span>
+                Remember username and password
+              </label>
+            </div>
+            <div class="form-group">
+              <button type="submit" id="loginBtn">Login</button>
+            </div>
+            <div class="login-status" id="loginStatus"></div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Main Section -->
+      <div id="mainSection" class="section hidden">
+        <div class="header">
+          <h1>Menuorg Order Print</h1>
+          <div class="user-info">
+            <span id="userInfo"></span>
+            <button id="logoutBtn" class="btn-secondary">Logout</button>
+          </div>
+        </div>
+
+        <div class="content">
+          <!-- Left Panel -->
+          <div class="left-panel">
+            <!-- Printer Configuration -->
+            <div class="config-panel">
+              <h3>打印机设置</h3>
+              <div class="printer-config">
+                <div class="printer-header">
+                  <span>可用打印机:</span>
+                  <div class="header-actions">
+                    <button id="refreshPrinters" class="btn-small">刷新</button>
+                    <button
+                      id="selectAllPrinters"
+                      class="btn-small btn-secondary"
+                    >
+                      全选
+                    </button>
+                    <button
+                      id="clearAllPrinters"
+                      class="btn-small btn-secondary"
+                    >
+                      清空
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 打印机列表容器 -->
+                <div id="printerList" class="printer-list">
+                  <div class="loading-text">正在加载打印机...</div>
+                </div>
+
+                <!-- 移除测试打印按钮 -->
+                <!-- <div class="printer-actions">
+                  <button id="testPrint" class="btn-small">测试打印</button>
+                </div> -->
+              </div>
+
+              <!-- 🍽️ 新增：分菜打印配置 -->
+              <div class="dish-print-config">
+                <h4>🍽️ 分菜打印配置</h4>
+
+                <!-- 分菜模式开关 -->
+                <div class="config-row">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="enableSeparatePrinting" />
+                    <span class="checkmark"></span>
+                    启用分菜打印模式
+                  </label>
+                  <button
+                    id="showDishPrintHelp"
+                    class="btn-small btn-help"
+                    title="查看分菜打印说明"
+                  >
+                    ?
+                  </button>
+                </div>
+
+                <!-- 打印机编号设置容器 -->
+                <div
+                  id="printerNumberConfig"
+                  class="printer-number-config hidden"
+                >
+                  <div class="config-section-title">打印机编号设置:</div>
+                  <div id="printerNumberList" class="printer-number-list">
+                    <!-- 动态生成打印机编号设置 -->
+                  </div>
+                  <div class="config-actions">
+                    <button
+                      id="saveDishPrintConfig"
+                      class="btn-small btn-primary"
+                    >
+                      保存配置
+                    </button>
+                    <button
+                      id="resetDishPrintConfig"
+                      class="btn-small btn-danger"
+                    >
+                      重置配置
+                    </button>
+                    <!-- 移除测试分菜打印按钮 -->
+                    <!-- <button id="testDishPrint" class="btn-small btn-success">
+                      测试分菜打印
+                    </button> -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- 🌍 新增：语言选择配置 -->
+              <div class="language-config">
+                <h4>🌍 打印语言配置</h4>
+
+                <!-- 语言选择选项 -->
+                <div class="config-row">
+                  <div class="language-options">
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="enableEnglish" checked />
+                      <span class="checkmark"></span>
+                      English (英文)
+                    </label>
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="enableChinese" />
+                      <span class="checkmark"></span>
+                      中文 (Chinese)
+                    </label>
+                  </div>
+                </div>
+
+                <!-- 语言配置说明 -->
+                <div class="config-description">
+                  <div class="description-text">
+                    选择要在小票上打印的语言。可以单选或多选：
+                    <ul>
+                      <li><strong>仅英文</strong>：使用 name_en 字段</li>
+                      <li><strong>仅中文</strong>：使用 name_ch 字段</li>
+                      <li>
+                        <strong>双语</strong>：显示为 "English Name + 中文名称"
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- 语言配置操作按钮 -->
+                <div class="config-actions">
+                  <button id="saveLanguageConfig" class="btn-small btn-primary">
+                    保存语言配置
+                  </button>
+                  <button
+                    id="resetLanguageConfig"
+                    class="btn-small btn-secondary"
+                  >
+                    重置为默认
+                  </button>
+                </div>
+              </div>
+
+              <div class="auto-print-config">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="autoPrint" checked />
+                  <span class="checkmark"></span>
+                  自动打印新订单
+                </label>
+              </div>
+
+              <!-- 🚀 新增：开机自动运行设置 -->
+              <div class="auto-start-config">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="autoStart" />
+                  <span class="checkmark"></span>
+                  开机自动运行
+                </label>
+                <small class="config-description"
+                  >启用后，系统开机时自动启动应用到托盘</small
+                >
+              </div>
+            </div>
+
+            <!-- System Status -->
+            <div class="status-panel">
+              <h3>System Status</h3>
+              <div class="status-item">
+                <span>WebSocket:</span>
+                <span id="wsStatus" class="status-badge status-disconnected"
+                  >Disconnected</span
+                >
+                <button id="testWebSocketBtn" class="btn-secondary">
+                  Test Connection
+                </button>
+              </div>
+              <div class="status-item">
+                <span>Printer:</span>
+                <span id="printerStatus" class="status-badge"
+                  >Not Selected</span
+                >
+              </div>
+              <div class="status-item">
+                <span>Today Orders:</span>
+                <span id="todayOrderCount" class="status-badge">0</span>
+              </div>
+              <!-- 🍽️ 新增：分菜打印状态 -->
+              <div class="status-item">
+                <span>分菜打印:</span>
+                <span id="dishPrintStatus" class="status-badge status-disabled"
+                  >已禁用</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Panel -->
+          <div class="right-panel">
+            <div class="orders-panel">
+              <div class="orders-header">
+                <h3>Recent Orders</h3>
+                <div class="orders-actions">
+                  <span id="orderCount" class="order-count">(0)</span>
+                  <button id="refreshOrders" class="btn-small">Refresh</button>
+                  <button id="clearOrders" class="btn-small btn-danger">
+                    Clear
+                  </button>
+                </div>
+              </div>
+              <div id="ordersList" class="orders-list">
+                <div class="no-orders">No orders yet</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Order Details Modal -->
+    <div id="orderModal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Order Details</h3>
+          <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div id="orderDetails"></div>
+        </div>
+        <div class="modal-footer">
+          <button id="printOrderBtn" class="btn-primary">Print Order</button>
+          <button id="closeModalBtn" class="btn-secondary">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🍽️ 新增：分菜打印帮助模态框 -->
+    <div id="dishPrintHelpModal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>🍽️ 分菜打印功能说明</h3>
+          <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="help-content">
+            <h4>功能概述</h4>
+            <p>
+              分菜打印功能允许根据菜品的
+              <code>printer_type</code>
+              字段将订单分配到不同的打印机，实现厨房分工打印。
+            </p>
+
+            <h4>使用方法</h4>
+            <ol>
+              <li><strong>启用分菜模式</strong>：勾选"启用分菜打印模式"</li>
+              <li>
+                <strong>设置打印机编号</strong>：为每台打印机设置编号（1-99）
+              </li>
+              <li>
+                <strong>菜品配置</strong>：确保订单中的菜品有正确的
+                <code>printer_type</code> 值
+              </li>
+              <li>
+                <strong>开始打印</strong>：新订单会根据
+                <code>printer_type</code> 自动分配到对应打印机
+              </li>
+            </ol>
+
+            <h4>分菜逻辑</h4>
+            <ul>
+              <li>
+                <code>printer_type = 1</code> → 编号为 1 的打印机（如：热菜台）
+              </li>
+              <li>
+                <code>printer_type = 2</code> → 编号为 2 的打印机（如：凉菜台）
+              </li>
+              <li>
+                <code>printer_type = 0</code> 或未设置 →
+                没有编号的打印机（完整订单）
+              </li>
+            </ul>
+
+            <h4>应用场景</h4>
+            <ul>
+              <li><strong>热菜台</strong>：printType = 1，处理炒菜、煎炸等</li>
+              <li>
+                <strong>凉菜台</strong>：printType = 2，处理凉拌菜、沙拉等
+              </li>
+              <li><strong>汤品台</strong>：printType = 3，处理汤类、粥类等</li>
+              <li><strong>收银台</strong>：无编号，打印完整订单用于核对</li>
+            </ul>
+
+            <h4>注意事项</h4>
+            <ul>
+              <li>没有编号的打印机会打印完整订单</li>
+              <li>如果找不到对应编号的打印机，菜品会归入完整订单</li>
+              <li>配置会自动保存，重启后保持有效</li>
+            </ul>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="closeDishPrintHelpBtn" class="btn-secondary">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+        <p>Processing...</p>
+      </div>
+    </div>
+
+    <!-- 性能优化工具 -->
+    <script src="../src/performance-utils.js"></script>
+
+    <!-- 核心功能脚本 -->
+    <script src="LodopFuncs.js"></script>
+    <script src="../src/enhanced-clodop-manager.js"></script>
+    <script src="../src/printer-lodop.js"></script>
+    <script src="js/api.js"></script>
+
+    <!-- 优化的WebSocket客户端 -->
+    <script src="js/websocket-optimized.js"></script>
+
+    <!-- 应用核心 -->
+    <script src="js/printer-manager.js"></script>
+    <script src="js/printer.js"></script>
+    <script src="js/update-manager.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>
