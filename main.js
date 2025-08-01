@@ -11,6 +11,9 @@ const {
 const path = require('path');
 const fs = require('fs');
 
+// 导入自动更新管理器
+const AutoUpdaterManager = require('./src/auto-updater');
+
 // 简单的配置存储
 const configPath = path.join(app.getPath('userData'), 'config.json');
 
@@ -254,6 +257,96 @@ function initAutoStart() {
 
 let mainWindow;
 let tray;
+let autoUpdater;
+let startupDelayTimer = null; // 添加启动延迟定时器
+
+// 🚀 检查是否需要启动延迟的函数
+function shouldDelayStartup() {
+  try {
+    const isAutoStarted = process.argv.includes('--auto-start');
+
+    if (!isAutoStarted) {
+      console.log('🚀 手动启动，无需延迟');
+      return false;
+    }
+
+    // 计算系统启动时间
+    const bootTime = Date.now() - process.uptime() * 1000;
+    const timeSinceStartup = Date.now() - bootTime;
+
+    // 如果系统启动时间小于10分钟，则认为是刚启动需要延迟
+    const shouldDelay = timeSinceStartup < 600000; // 10分钟
+
+    console.log('🚀 启动延迟检查:', {
+      isAutoStarted,
+      timeSinceStartupMinutes: Math.round(timeSinceStartup / 60000),
+      shouldDelay,
+      bootTime: new Date(bootTime).toLocaleString(),
+    });
+
+    return shouldDelay;
+  } catch (error) {
+    console.error('❌ 启动延迟检查失败:', error);
+    return false;
+  }
+}
+
+// 🚀 延迟启动函数
+function delayedStartup() {
+  const delayMinutes = 5;
+  const delayMs = delayMinutes * 60 * 1000; // 5分钟
+
+  console.log(
+    `⏳ 检测到电脑刚启动，将在${delayMinutes}分钟后启动应用以避免CLodop时序问题`
+  );
+
+  // 显示延迟启动通知
+  // if (Notification.isSupported()) {
+  //   new Notification({
+  //     title: 'MenuorgPrint 启动中',
+  //     body: `为避免打印服务冲突，将在${delayMinutes}分钟后完成启动`,
+  //     silent: true,
+  //   }).show();
+  // }
+
+  // 创建系统托盘，让用户知道程序正在等待
+  createTray();
+
+  // 设置延迟定时器
+  startupDelayTimer = setTimeout(() => {
+    console.log('✅ 启动延迟完成，开始初始化应用');
+
+    // 显示启动完成通知
+    if (Notification.isSupported()) {
+      new Notification({
+        title: 'MenuorgPrint 正在启动',
+        body: '延迟启动完成，正在初始化打印服务...',
+        silent: true,
+      }).show();
+    }
+
+    // 创建主窗口
+    createWindow();
+
+    // 初始化开机自动运行功能
+    initAutoStart();
+
+    // 再次显示就绪通知
+    setTimeout(() => {
+      if (Notification.isSupported()) {
+        new Notification({
+          title: 'MenuorgPrint Ready',
+          body: '打印服务已就绪，随时处理订单打印',
+          silent: true,
+        }).show();
+      }
+    }, 10000); // 10秒后显示就绪通知
+
+    startupDelayTimer = null;
+  }, delayMs);
+
+  console.log(`⏳ 启动延迟定时器已设置: ${delayMs}ms (${delayMinutes}分钟)`);
+}
 
 function createWindow() {
   // 检查是否为自动启动
@@ -284,7 +377,7 @@ function createWindow() {
   // 如果是自动启动，直接最小化到托盘
   if (isAutoStart) {
     mainWindow.hide();
-    console.log('🚀 自动启动模式：应用已启动到托盘');
+    console.log('�� 自动启动模式：应用已启动到托盘');
   }
 
   mainWindow.on('closed', () => {
@@ -399,8 +492,81 @@ function createTrayMenu() {
     },
     { type: 'separator' },
     {
+      label: '🔄 检查更新',
+      click: () => {
+        if (autoUpdater && app.isPackaged) {
+          autoUpdater.checkForUpdatesManually();
+        } else {
+          if (Notification.isSupported()) {
+            new Notification({
+              title: 'MenuorgPrint',
+              body: '开发模式下无法检查更新',
+              silent: false,
+            }).show();
+          }
+        }
+      },
+    },
+    {
       label: '退出应用',
       click: () => {
+        app.isQuiting = true;
+        app.quit();
+      },
+    },
+  ]);
+}
+
+// 🚀 创建延迟启动时的简化托盘菜单
+function createDelayedStartupTrayMenu() {
+  const remainingTime = startupDelayTimer
+    ? Math.ceil(
+        (startupDelayTimer._idleTimeout -
+          (Date.now() - startupDelayTimer._idleStart)) /
+          60000
+      )
+    : 0;
+
+  return Menu.buildFromTemplate([
+    {
+      label: `⏳ 启动中... (${remainingTime}分钟后完成)`,
+      enabled: false,
+    },
+    { type: 'separator' },
+    {
+      label: '立即启动',
+      click: () => {
+        if (startupDelayTimer) {
+          console.log('🚀 用户选择立即启动，取消延迟');
+          clearTimeout(startupDelayTimer);
+          startupDelayTimer = null;
+
+          // 立即执行启动逻辑
+          createWindow();
+          initAutoStart();
+
+          // 更新托盘菜单
+          if (tray) {
+            tray.setContextMenu(createTrayMenu());
+          }
+
+          if (Notification.isSupported()) {
+            new Notification({
+              title: 'MenuorgPrint',
+              body: '应用已立即启动完成',
+              silent: false,
+            }).show();
+          }
+        }
+      },
+    },
+    {
+      label: '退出应用',
+      click: () => {
+        if (startupDelayTimer) {
+          clearTimeout(startupDelayTimer);
+          startupDelayTimer = null;
+        }
         app.isQuiting = true;
         app.quit();
       },
@@ -505,15 +671,35 @@ function createTray() {
 
   tray = new Tray(trayIcon);
 
-  // 设置初始菜单
-  const contextMenu = createTrayMenu();
+  // 根据是否在延迟启动状态设置不同的菜单
+  const contextMenu = startupDelayTimer
+    ? createDelayedStartupTrayMenu()
+    : createTrayMenu();
   tray.setContextMenu(contextMenu);
 
-  tray.setToolTip('MenuorgPrint - 餐厅订单打印');
+  // 设置托盘提示文本
+  const tooltipText = startupDelayTimer
+    ? 'MenuorgPrint - 启动中...'
+    : 'MenuorgPrint - 餐厅订单打印';
+  tray.setToolTip(tooltipText);
 
-  // 双击托盘图标显示窗口
+  // 双击托盘图标的行为
   tray.on('double-click', () => {
-    if (mainWindow) {
+    if (startupDelayTimer) {
+      // 如果在延迟启动中，双击立即启动
+      console.log('🚀 双击托盘图标，立即启动应用');
+      clearTimeout(startupDelayTimer);
+      startupDelayTimer = null;
+
+      createWindow();
+      initAutoStart();
+
+      // 更新托盘
+      if (tray) {
+        tray.setContextMenu(createTrayMenu());
+        tray.setToolTip('MenuorgPrint - 餐厅订单打印');
+      }
+    } else if (mainWindow) {
       if (mainWindow.isVisible()) {
         mainWindow.hide();
       } else {
@@ -527,15 +713,39 @@ function createTray() {
 }
 
 app.whenReady().then(() => {
-  createWindow();
-  createTray();
+  // 🚀 检查是否需要延迟启动
+  if (shouldDelayStartup()) {
+    // 需要延迟启动，只创建托盘，不创建窗口
+    delayedStartup();
+  } else {
+    // 正常启动流程
+    createWindow();
+    createTray();
 
-  // 🚀 初始化开机自动运行功能
-  initAutoStart();
+    // 🚀 初始化开机自动运行功能
+    initAutoStart();
+  }
+
+  // 🔄 初始化自动更新功能
+  autoUpdater = new AutoUpdaterManager();
+  if (mainWindow) {
+    autoUpdater.setMainWindow(mainWindow);
+  }
+
+  // 只在生产环境中启用自动更新
+  if (app.isPackaged) {
+    autoUpdater.checkForUpdatesOnStartup();
+  } else {
+    console.log('🔧 开发模式，跳过自动更新检查');
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
+      // 确保自动更新器有正确的窗口引用
+      if (autoUpdater && mainWindow) {
+        autoUpdater.setMainWindow(mainWindow);
+      }
     }
   });
 });
@@ -549,6 +759,12 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   app.isQuiting = true;
+
+  // 清理启动延迟定时器
+  if (startupDelayTimer) {
+    clearTimeout(startupDelayTimer);
+    startupDelayTimer = null;
+  }
 });
 
 // 🔒 防止多实例运行 - 增强版
@@ -934,6 +1150,68 @@ ipcMain.handle('is-system-recently-started', async (event) => {
   } catch (error) {
     console.error('❌ IPC检查系统启动状态失败:', error);
     return { success: false, isRecentlyStarted: false, error: error.message };
+  }
+});
+
+// 🔄 自动更新相关的IPC处理程序
+ipcMain.handle('check-for-updates', async () => {
+  try {
+    if (autoUpdater && app.isPackaged) {
+      await autoUpdater.checkForUpdatesManually();
+      return { success: true, message: '正在检查更新...' };
+    } else {
+      return { success: false, message: '开发模式下无法检查更新' };
+    }
+  } catch (error) {
+    console.error('❌ IPC检查更新失败:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-update-status', async () => {
+  try {
+    if (autoUpdater) {
+      return { success: true, ...autoUpdater.getUpdateStatus() };
+    } else {
+      return {
+        success: true,
+        isChecking: false,
+        updateAvailable: false,
+        updateDownloaded: false,
+        currentVersion: require('./package.json').version,
+      };
+    }
+  } catch (error) {
+    console.error('❌ IPC获取更新状态失败:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('download-update', async () => {
+  try {
+    if (autoUpdater && app.isPackaged) {
+      autoUpdater.downloadUpdate();
+      return { success: true, message: '开始下载更新...' };
+    } else {
+      return { success: false, message: '开发模式下无法下载更新' };
+    }
+  } catch (error) {
+    console.error('❌ IPC下载更新失败:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('quit-and-install', async () => {
+  try {
+    if (autoUpdater && app.isPackaged) {
+      autoUpdater.quitAndInstall();
+      return { success: true, message: '正在重启安装更新...' };
+    } else {
+      return { success: false, message: '开发模式下无法安装更新' };
+    }
+  } catch (error) {
+    console.error('❌ IPC退出安装失败:', error);
+    return { success: false, error: error.message };
   }
 });
 

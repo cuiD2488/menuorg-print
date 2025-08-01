@@ -9,8 +9,11 @@ class OrderPrintApp {
 
     // 状态管理
     this.printedOrderIds = new Set();
+    this.printedOrderTimestamps = new Map(); // 已打印订单的时间戳
     this.lastWebSocketConnectTime = null;
     this.lastOrderCheckTime = null;
+    this.webSocketDisconnectTime = null; // 记录WebSocket断开时间
+    this.webSocketReconnectTime = null; // 记录WebSocket重连时间
     this._pendingPrinterSelection = null;
 
     // 语言配置
@@ -46,6 +49,16 @@ class OrderPrintApp {
 
     // 异步初始化（不阻塞构造函数）
     this.scheduleAsyncInit();
+
+    // 初始化WebSocket连接（带系统启动延迟检测）
+    this.initializeWebSocketWithStartupDelay();
+
+    // 设置定期清理已打印订单记录
+    setInterval(() => {
+      this.cleanupPrintedOrders();
+    }, 60 * 60 * 1000); // 每小时清理一次
+
+    console.log('[APP] 应用初始化完成');
   }
 
   // 安排异步初始化
@@ -261,9 +274,62 @@ class OrderPrintApp {
       {
         id: 'closeDishPrintHelpBtn',
         event: 'click',
-        handler: () => this.closeDishPrintHelp(),
+        handler: () => this.hideDishPrintHelp(),
+      },
+      {
+        id: 'refreshOrders',
+        event: 'click',
+        handler: () => {
+          console.log('[APP] 🔄 刷新订单按钮被点击！');
+          this.loadRecentOrders();
+        },
+      },
+      {
+        id: 'clearOrders',
+        event: 'click',
+        handler: () => this.clearOrders(),
+      },
+      {
+        id: 'testWebSocketBtn',
+        event: 'click',
+        handler: () => this.testWebSocketConnection(),
       },
     ];
+
+    // 添加模态框事件绑定
+    const modalEvents = [
+      {
+        selector: '#orderModal .close',
+        event: 'click',
+        handler: () => this.hideOrderModal(),
+      },
+      {
+        selector: '#dishPrintHelpModal .close',
+        event: 'click',
+        handler: () => this.hideDishPrintHelp(),
+      },
+      {
+        selector: '#dishPrintHelpModal',
+        event: 'click',
+        handler: (e) => {
+          if (e.target.id === 'dishPrintHelpModal') {
+            this.hideDishPrintHelp();
+          }
+        },
+      },
+    ];
+
+    // 绑定模态框事件
+    modalEvents.forEach((eventConfig) => {
+      const element = document.querySelector(eventConfig.selector);
+      if (element) {
+        this.eventManager.addEventListener(
+          element,
+          eventConfig.event,
+          eventConfig.handler
+        );
+      }
+    });
 
     // 批量绑定事件（避免阻塞）
     PerformanceUtils.batchProcess(
@@ -385,7 +451,8 @@ class OrderPrintApp {
     // 使用新的打印系统初始化函数
     await initializePrinterSystem();
 
-    this.bindEvents();
+    // 使用优化的事件绑定代替旧的 bindEvents()
+    // this.bindEvents();
     await this.initUI();
     await this.loadPrintedOrdersRecord(); // 加载已打印订单记录
     await this.checkAutoLogin();
@@ -766,9 +833,19 @@ class OrderPrintApp {
     //   this.hidePreview();
     // });
 
-    document.querySelector('.close').addEventListener('click', () => {
-      this.hideOrderModal();
-    });
+    // 订单详情模态框关闭按钮
+    document
+      .querySelector('#orderModal .close')
+      .addEventListener('click', () => {
+        this.hideOrderModal();
+      });
+
+    // 分菜打印帮助模态框关闭按钮
+    document
+      .querySelector('#dishPrintHelpModal .close')
+      .addEventListener('click', () => {
+        this.hideDishPrintHelp();
+      });
 
     document.getElementById('closeModalBtn').addEventListener('click', () => {
       this.hideOrderModal();
@@ -880,7 +957,8 @@ class OrderPrintApp {
 
         setTimeout(() => {
           this.showMainSection();
-          this.connectWebSocket();
+          // 登录后使用带启动延迟检测的WebSocket初始化
+          this.initializeWebSocketWithStartupDelay();
           this.loadRecentOrders();
         }, 1000);
       } else {
@@ -1178,6 +1256,109 @@ class OrderPrintApp {
     }
   }
 
+  initializeWebSocket() {
+    console.log('[APP] 初始化WebSocket连接...');
+    if (this.currentUser) {
+      this.connectWebSocket();
+    } else {
+      console.log('[APP] 用户未登录，等待登录后连接WebSocket');
+    }
+  }
+
+  // 🆕 带系统启动检测的WebSocket初始化
+  async initializeWebSocketWithStartupDelay() {
+    console.log('[APP] 🔍 检测系统启动状态并初始化WebSocket...');
+
+    try {
+      // 检测是否是系统刚启动
+      let isSystemStartup = false;
+      let startupDelay = 0;
+
+      // 尝试从主进程获取系统启动信息
+      if (window.electronAPI && window.electronAPI.getSystemStartupInfo) {
+        try {
+          const startupInfo = await window.electronAPI.getSystemStartupInfo();
+          isSystemStartup =
+            startupInfo.isRecentlyStarted || startupInfo.isAutoStarted;
+          const timeSinceStartup = startupInfo.timeSinceStartup || 0;
+
+          console.log('[APP] 🕐 系统启动信息:', {
+            isSystemStartup,
+            timeSinceStartup: Math.round(timeSinceStartup / 1000) + '秒',
+            isAutoStarted: startupInfo.isAutoStarted,
+          });
+
+          // 根据启动时间调整延迟策略（类似CLodop）
+          if (timeSinceStartup < 60000) {
+            // 1分钟内：等待30秒
+            startupDelay = 30000;
+            console.log('[APP] ⏳ 系统刚启动(<1分钟)，WebSocket将延迟30秒连接');
+          } else if (timeSinceStartup < 180000) {
+            // 3分钟内：等待15秒
+            startupDelay = 15000;
+            console.log('[APP] ⏳ 系统刚启动(<3分钟)，WebSocket将延迟15秒连接');
+          } else if (timeSinceStartup < 300000) {
+            // 5分钟内：等待5秒
+            startupDelay = 5000;
+            console.log('[APP] ⏳ 系统启动中(<5分钟)，WebSocket将延迟5秒连接');
+          }
+        } catch (error) {
+          console.warn('[APP] ⚠️ 无法获取系统启动信息:', error);
+          // 如果无法获取系统启动信息，使用保守的延迟策略
+          if (performance.now() < 60000) {
+            startupDelay = 15000; // 页面加载不到1分钟时延迟15秒
+            console.log('[APP] ⏳ 页面刚加载，保守延迟15秒连接WebSocket');
+          }
+        }
+      }
+
+      // 如果需要延迟，显示状态提示
+      if (startupDelay > 0) {
+        console.log(
+          `[APP] 🕐 系统刚启动，WebSocket将在${Math.round(
+            startupDelay / 1000
+          )}秒后连接，确保网络服务就绪...`
+        );
+
+        // 更新UI状态
+        const wsStatus = document.getElementById('wsStatus');
+        if (wsStatus) {
+          wsStatus.textContent = `启动中(${Math.round(startupDelay / 1000)}s)`;
+          wsStatus.className = 'status-badge status-warning';
+        }
+
+        // 延迟执行
+        await new Promise((resolve) => setTimeout(resolve, startupDelay));
+      }
+
+      // 最终检查用户状态并连接
+      if (this.currentUser) {
+        console.log('[APP] ✅ 延迟结束，开始连接WebSocket...');
+        this.connectWebSocket();
+      } else {
+        console.log('[APP] ⚠️ 延迟结束但用户仍未登录，等待用户登录...');
+        // 设置一个定时器，每3秒检查一次用户登录状态
+        const checkUserInterval = setInterval(() => {
+          if (this.currentUser) {
+            console.log('[APP] ✅ 用户已登录，开始连接WebSocket...');
+            clearInterval(checkUserInterval);
+            this.connectWebSocket();
+          }
+        }, 3000);
+
+        // 30秒后停止检查，避免无限等待
+        setTimeout(() => {
+          clearInterval(checkUserInterval);
+          console.warn('[APP] ⚠️ 等待用户登录超时，停止WebSocket连接尝试');
+        }, 30000);
+      }
+    } catch (error) {
+      console.error('[APP] ❌ WebSocket启动延迟检测失败:', error);
+      // 发生错误时，回退到普通初始化
+      this.initializeWebSocket();
+    }
+  }
+
   connectWebSocket() {
     if (!this.currentUser) {
       console.warn('[APP] Cannot connect WebSocket: no current user');
@@ -1202,10 +1383,13 @@ class OrderPrintApp {
       const currentTime = new Date();
       const wasReconnection = this.lastWebSocketConnectTime !== null;
       this.lastWebSocketConnectTime = currentTime;
+      this.webSocketReconnectTime = currentTime;
 
       // 如果是重连（不是首次连接），检查错过的订单
       if (wasReconnection) {
         console.log('[APP] WebSocket重连成功，检查错过的订单...');
+        console.log('[APP] 断开时间:', this.webSocketDisconnectTime);
+        console.log('[APP] 重连时间:', this.webSocketReconnectTime);
         await this.checkMissedOrdersAfterReconnect();
       } else {
         console.log('[APP] WebSocket首次连接成功');
@@ -1213,11 +1397,22 @@ class OrderPrintApp {
       }
     });
 
-    this.wsClient.on('disconnected', () => {
+    this.wsClient.on('disconnected', (data) => {
       console.log('[APP] WebSocket disconnected');
       document.getElementById('wsStatus').textContent = 'Disconnected';
       document.getElementById('wsStatus').className =
         'status-badge status-error';
+
+      // 使用WebSocket客户端记录的断开时间
+      const disconnectionTime = data.disconnectionTime || Date.now();
+      this.webSocketDisconnectTime = new Date(disconnectionTime);
+      console.log(
+        '[APP] 📋 记录WebSocket断开时间:',
+        this.webSocketDisconnectTime
+      );
+      console.log(
+        '[APP] 断开原因: code=' + data.code + ', reason=' + data.reason
+      );
     });
 
     this.wsClient.on('newOrder', (orderData) => {
@@ -1321,8 +1516,7 @@ class OrderPrintApp {
 
       if (printResult.成功数量 > 0) {
         // 记录已打印的订单ID
-        this.printedOrderIds.add(order.order_id);
-        console.log(`[APP] 订单 ${order.order_id} 已记录为已打印`);
+        this.markOrderAsPrinted(order.order_id);
         this.savePrintedOrdersRecord(); // 保存到localStorage
 
         this.showTrayNotification(
@@ -1404,37 +1598,181 @@ class OrderPrintApp {
         }
       }
 
-      console.log('[APP] 错过订单处理完成');
+      console.log('[APP] ✅ 错过订单处理完成');
       this.updateLastOrderCheckTime();
+
+      // 清除断开时间记录，避免重复检测
+      this.webSocketDisconnectTime = null;
+      if (this.wsClient) {
+        this.wsClient.clearDisconnectionTime();
+      }
+      console.log('[APP] 🗑️ 已清除断开时间记录');
     } catch (error) {
       console.error('[APP] 检查错过订单过程出错:', error);
     }
   }
 
-  // 筛选出错过的订单
+  // 筛选出错过的订单 - 增强版本
   filterMissedOrders(orders) {
-    if (!this.lastOrderCheckTime) {
-      // 如果没有记录最后检查时间，只处理最近5分钟的订单
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-      this.lastOrderCheckTime = fiveMinutesAgo;
+    console.log('[APP] 🔍 开始筛选错过的订单，订单总数:', orders.length);
+    console.log('[APP] 🕐 当前时间:', new Date().toISOString());
+
+    // 使用WebSocket断开时间作为基准时间
+    let checkTime = this.webSocketDisconnectTime;
+    let timeSource = 'WebSocket断开时间';
+
+    if (!checkTime && this.wsClient) {
+      // 尝试从WebSocket客户端获取断开时间
+      const wsDisconnectTime = this.wsClient.getLastDisconnectionTime();
+      if (wsDisconnectTime) {
+        checkTime = new Date(wsDisconnectTime);
+        timeSource = 'WebSocket客户端断开时间';
+      }
+    }
+
+    if (!checkTime) {
+      // 如果没有记录断开时间，使用最后检查时间
+      checkTime = this.lastOrderCheckTime;
+      timeSource = '最后检查时间';
+    }
+
+    if (!checkTime) {
+      // 如果都没有记录，只处理最近15分钟的订单（增加时间范围）
+      checkTime = new Date(Date.now() - 15 * 60 * 1000);
+      timeSource = '默认15分钟前';
+      console.log('[APP] ⚠️ 没有记录时间基准，使用最近15分钟:', checkTime);
+    }
+
+    console.log(
+      `[APP] 📅 筛选错过订单的时间基准 (${timeSource}):`,
+      checkTime.toISOString()
+    );
+    console.log('[APP] 📋 已打印订单数量:', this.printedOrderIds.size);
+
+    // 验证时间有效性
+    if (checkTime && checkTime > new Date()) {
+      console.warn('[APP] ⚠️ 检查时间在未来，重置为5分钟前');
+      checkTime = new Date(Date.now() - 5 * 60 * 1000);
+      timeSource = '修正后的5分钟前';
     }
 
     const missedOrders = [];
+    let checkedCount = 0;
+    let skippedByTime = 0;
+    let skippedByPrinted = 0;
+    let skippedByStatus = 0;
+    let invalidTimeFormat = 0;
 
     for (const order of orders) {
-      const orderTime = new Date(order.create_time || order.created_at);
+      checkedCount++;
+
+      // 验证订单时间格式
+      const orderTimeStr = order.create_time || order.created_at;
+      if (!orderTimeStr) {
+        console.warn(`[APP] ⚠️ 订单 ${order.order_id} 缺少时间字段`);
+        invalidTimeFormat++;
+        continue;
+      }
+
+      const orderTime = new Date(orderTimeStr);
+      if (isNaN(orderTime.getTime())) {
+        console.warn(
+          `[APP] ⚠️ 订单 ${order.order_id} 时间格式无效: ${orderTimeStr}`
+        );
+        invalidTimeFormat++;
+        continue;
+      }
+
+      const isAfterCheckTime = orderTime > checkTime;
+      const timeDiff = orderTime.getTime() - checkTime.getTime();
+      const timeDiffMinutes = Math.round(timeDiff / 60000);
+
+      console.log(
+        `[APP] 📄 [${checkedCount}/${orders.length}] 订单 ${order.order_id}:`
+      );
+      console.log(`     📅 订单时间: ${orderTime.toISOString()}`);
+      console.log(`     📅 基准时间: ${checkTime.toISOString()}`);
+      console.log(`     ⏰ 时间差: ${timeDiffMinutes}分钟`);
+      console.log(`     ✅ 晚于基准: ${isAfterCheckTime}`);
+      console.log(`     📊 状态: ${order.order_status}`);
+      console.log(
+        `     📄 已打印: ${this.printedOrderIds.has(order.order_id)}`
+      );
 
       // 检查订单是否在断开期间创建
-      if (orderTime > this.lastOrderCheckTime) {
+      if (isAfterCheckTime) {
         // 检查是否已经打印过
         if (!this.printedOrderIds.has(order.order_id)) {
           // 只处理待处理或已确认的订单
           if (order.order_status === 0 || order.order_status === 1) {
+            console.log(
+              `[APP] ✅ 🎯 发现错过的订单: ${order.order_id}, 状态: ${order.order_status}, 时间差: ${timeDiffMinutes}分钟`
+            );
             missedOrders.push(order);
+          } else {
+            skippedByStatus++;
+            console.log(
+              `[APP] ❌ 订单 ${order.order_id} 状态不符合打印条件，状态: ${order.order_status}`
+            );
           }
         } else {
-          console.log(`[APP] 订单 ${order.order_id} 已打印过，跳过`);
+          skippedByPrinted++;
+          console.log(`[APP] ⚠️ 订单 ${order.order_id} 已打印过，跳过`);
         }
+      } else {
+        skippedByTime++;
+        console.log(
+          `[APP] ⏰ 订单 ${order.order_id} 时间早于基准时间 (${timeDiffMinutes}分钟前)，跳过`
+        );
+      }
+    }
+
+    console.log('[APP] 📊 筛选结果统计:');
+    console.log(`     🔍 检查订单总数: ${checkedCount}`);
+    console.log(`     ⏰ 时间早于基准: ${skippedByTime}`);
+    console.log(`     📄 已打印过的: ${skippedByPrinted}`);
+    console.log(`     📊 状态不符合: ${skippedByStatus}`);
+    console.log(`     ❌ 时间格式无效: ${invalidTimeFormat}`);
+    console.log(`     🎯 找到错过订单: ${missedOrders.length}`);
+
+    if (missedOrders.length > 0) {
+      console.log('[APP] 🎯 错过的订单详情:');
+      missedOrders.forEach((order, index) => {
+        const orderTime = new Date(order.create_time || order.created_at);
+        const timeDiff = Math.round(
+          (orderTime.getTime() - checkTime.getTime()) / 60000
+        );
+        console.log(
+          `     ${index + 1}. ID: ${
+            order.order_id
+          }, 时间: ${orderTime.toISOString()}, 状态: ${
+            order.order_status
+          }, 时间差: ${timeDiff}分钟`
+        );
+      });
+    } else {
+      console.log('[APP] 🤔 没有找到错过的订单，可能原因:');
+      console.log('     1. 所有符合时间的订单都已打印过');
+      console.log('     2. 所有新订单状态不是待处理(0)或已确认(1)');
+      console.log('     3. 基准时间设置不正确');
+      console.log('     4. 系统时间或时区有差异');
+
+      // 显示最近几个订单的详细信息用于调试
+      if (orders.length > 0) {
+        console.log('[APP] 🔍 最近3个订单的详细信息:');
+        orders.slice(0, 3).forEach((order, index) => {
+          const orderTime = new Date(order.create_time || order.created_at);
+          const timeDiff = orderTime.getTime() - checkTime.getTime();
+          console.log(`     ${index + 1}. ID: ${order.order_id}`);
+          console.log(`        时间: ${orderTime.toISOString()}`);
+          console.log(`        状态: ${order.order_status}`);
+          console.log(
+            `        已打印: ${this.printedOrderIds.has(order.order_id)}`
+          );
+          console.log(
+            `        与基准时间差: ${Math.round(timeDiff / 60000)}分钟`
+          );
+        });
       }
     }
 
@@ -1456,6 +1794,7 @@ class OrderPrintApp {
 
   async loadRecentOrders() {
     try {
+      console.log('🔄 [APP] === 开始加载最新订单 ===');
       console.log('[APP] Loading recent orders from API...');
       const response = await API.getOrderList(1, 10);
 
@@ -2070,7 +2409,7 @@ class OrderPrintApp {
 
       if (printResult.成功数量 > 0) {
         // 记录已打印的订单ID
-        this.printedOrderIds.add(this.currentOrderForPrint.order_id);
+        this.markOrderAsPrinted(this.currentOrderForPrint.order_id);
         console.log(
           `[APP] 手动打印订单 ${this.currentOrderForPrint.order_id} 已记录为已打印`
         );
@@ -2132,8 +2471,7 @@ class OrderPrintApp {
 
       if (printResult.成功数量 > 0) {
         // 记录已打印的订单ID
-        this.printedOrderIds.add(orderId);
-        console.log(`[APP] 手动打印订单 ${orderId} 已记录为已打印`);
+        this.markOrderAsPrinted(orderId);
         this.savePrintedOrdersRecord(); // 保存到localStorage
 
         this.showTrayNotification(
@@ -2787,6 +3125,77 @@ class OrderPrintApp {
       toggleElement.textContent = '隐藏';
     }
   }
+
+  // 🔧 调试工具：测试WebSocket新订单处理
+  testWebSocketNewOrder(orderId = 'TEST_' + Date.now()) {
+    if (!this.wsClient) {
+      console.error('[APP] WebSocket客户端未初始化');
+      return;
+    }
+
+    console.log('[APP] 🧪 测试WebSocket新订单处理，订单ID:', orderId);
+    this.wsClient.testNewOrderMessage(orderId);
+  }
+
+  // 🔧 调试工具：显示WebSocket连接状态
+  logWebSocketStatus() {
+    if (!this.wsClient) {
+      console.error('[APP] WebSocket客户端未初始化');
+      return;
+    }
+
+    console.log('[APP] 📊 WebSocket状态:');
+    this.wsClient.logConnectionInfo();
+
+    const status = this.wsClient.getStatus();
+    console.log('[APP] 🔍 详细状态:', status);
+  }
+
+  // 🔧 调试工具：手动触发重连
+  reconnectWebSocket() {
+    if (!this.wsClient) {
+      console.error('[APP] WebSocket客户端未初始化');
+      return;
+    }
+
+    console.log('[APP] 🔄 手动触发WebSocket重连...');
+    this.wsClient.close();
+    setTimeout(() => {
+      this.wsClient.connect();
+    }, 1000);
+  }
+
+  // 清理已打印订单记录，防止无限增长
+  cleanupPrintedOrders() {
+    const maxAge = 24 * 60 * 60 * 1000; // 24小时
+    const now = Date.now();
+    const sizeBefore = this.printedOrderIds.size;
+
+    // 清理超过24小时的记录
+    for (const [orderId, timestamp] of this.printedOrderTimestamps || []) {
+      if (now - timestamp > maxAge) {
+        this.printedOrderIds.delete(orderId);
+        this.printedOrderTimestamps?.delete(orderId);
+      }
+    }
+
+    const sizeAfter = this.printedOrderIds.size;
+    if (sizeBefore !== sizeAfter) {
+      console.log(
+        `[APP] 🧹 清理过期的已打印订单记录: ${sizeBefore} -> ${sizeAfter}`
+      );
+    }
+  }
+
+  // 记录订单已打印，包含时间戳
+  markOrderAsPrinted(orderId) {
+    this.printedOrderIds.add(orderId);
+    if (!this.printedOrderTimestamps) {
+      this.printedOrderTimestamps = new Map();
+    }
+    this.printedOrderTimestamps.set(orderId, Date.now());
+    console.log(`[APP] 📄 标记订单 ${orderId} 为已打印`);
+  }
 }
 
 let app;
@@ -2864,3 +3273,717 @@ function updatePrinterStatus(engine) {
     statusElement.className = `status-badge ${statusClass}`;
   }
 }
+
+// 🔧 全局调试工具 - 可在浏览器控制台中使用
+window.debugWebSocket = {
+  test: (orderId) => {
+    if (window.app && window.app.testWebSocketNewOrder) {
+      window.app.testWebSocketNewOrder(orderId);
+    } else {
+      console.error('应用未初始化或方法不存在');
+    }
+  },
+
+  status: () => {
+    if (window.app && window.app.logWebSocketStatus) {
+      window.app.logWebSocketStatus();
+    } else {
+      console.error('应用未初始化或方法不存在');
+    }
+  },
+
+  reconnect: () => {
+    if (window.app && window.app.reconnectWebSocket) {
+      window.app.reconnectWebSocket();
+    } else {
+      console.error('应用未初始化或方法不存在');
+    }
+  },
+
+  help: () => {
+    console.log(`
+🔧 WebSocket调试工具使用说明:
+
+1. 测试新订单消息处理:
+   debugWebSocket.test('订单ID')
+
+2. 查看WebSocket连接状态:
+   debugWebSocket.status()
+
+3. 手动重连WebSocket:
+   debugWebSocket.reconnect()
+
+4. 显示此帮助:
+   debugWebSocket.help()
+
+示例:
+debugWebSocket.test('12345')  // 测试订单ID为12345的新订单消息
+debugWebSocket.status()       // 查看当前连接状态
+    `);
+  },
+};
+
+// 🔧 全局调试工具
+window.debugWebSocket = {
+  testNewOrder: (orderId) => app.testWebSocketNewOrder(orderId),
+  logStatus: () => app.logWebSocketStatus(),
+  reconnect: () => app.reconnectWebSocket(),
+
+  // 🆕 WebSocket连接诊断工具
+  diagnoseConnection: () => {
+    console.log('[DEBUG] 🏥 WebSocket连接诊断开始...');
+
+    const diagnosis = {
+      timestamp: new Date().toISOString(),
+      userInfo: {
+        currentUser: !!app.currentUser,
+        userId: app.currentUser?.user_id || 'N/A',
+        userDetails: app.currentUser || null,
+      },
+      websocketInfo: {
+        clientExists: !!app.wsClient,
+        expectedUrl: app.currentUser
+          ? `wss://message.menuorg.com/app/v1/web_socket/7/${app.currentUser.user_id}`
+          : 'N/A (用户未登录)',
+        actualUrl: app.wsClient?.url || 'N/A',
+        connectionState: app.wsClient?.getStatus()?.state || 'N/A',
+        isConnected: app.wsClient?.isConnected() || false,
+      },
+      commonIssues: [],
+      recommendations: [],
+    };
+
+    // 检查常见问题
+    if (!app.currentUser) {
+      diagnosis.commonIssues.push('❌ 用户未登录');
+      diagnosis.recommendations.push('请先登录后再尝试连接WebSocket');
+    }
+
+    if (app.wsClient && app.wsClient.url) {
+      const url = app.wsClient.url;
+      if (url.includes('127.0.0.1:8000') || url.includes('localhost:8000')) {
+        diagnosis.commonIssues.push(
+          '❌ WebSocket URL错误：尝试连接到本地8000端口'
+        );
+        diagnosis.recommendations.push(
+          '需要修复WebSocket URL配置，应该连接到message.menuorg.com'
+        );
+      }
+      if (url.includes('c_webskt')) {
+        diagnosis.commonIssues.push(
+          '❌ WebSocket路径错误：使用了错误的c_webskt路径'
+        );
+        diagnosis.recommendations.push(
+          'WebSocket路径应该是/app/v1/web_socket/7/用户ID'
+        );
+      }
+      if (url.startsWith('ws://') && !url.includes('localhost')) {
+        diagnosis.commonIssues.push(
+          '⚠️ 使用HTTP协议而非HTTPS，可能导致安全问题'
+        );
+        diagnosis.recommendations.push('建议使用wss://协议连接到生产服务器');
+      }
+    }
+
+    if (!app.wsClient) {
+      diagnosis.commonIssues.push('❌ WebSocket客户端未初始化');
+      diagnosis.recommendations.push('尝试重新初始化WebSocket连接');
+    }
+
+    console.log('[DEBUG] 📊 连接诊断报告:', diagnosis);
+
+    // 输出格式化的诊断结果
+    console.log('\n🏥 === WebSocket连接诊断报告 ===');
+    console.log(
+      `👤 用户状态: ${
+        diagnosis.userInfo.currentUser ? '✅ 已登录' : '❌ 未登录'
+      }`
+    );
+    console.log(`🆔 用户ID: ${diagnosis.userInfo.userId}`);
+    console.log(`🔗 期望URL: ${diagnosis.websocketInfo.expectedUrl}`);
+    console.log(`🔗 实际URL: ${diagnosis.websocketInfo.actualUrl}`);
+    console.log(
+      `📶 连接状态: ${
+        diagnosis.websocketInfo.isConnected ? '✅ 已连接' : '❌ 未连接'
+      }`
+    );
+
+    if (diagnosis.commonIssues.length > 0) {
+      console.log('\n⚠️ 发现的问题:');
+      diagnosis.commonIssues.forEach((issue, index) => {
+        console.log(`   ${index + 1}. ${issue}`);
+      });
+    }
+
+    if (diagnosis.recommendations.length > 0) {
+      console.log('\n💡 建议解决方案:');
+      diagnosis.recommendations.forEach((rec, index) => {
+        console.log(`   ${index + 1}. ${rec}`);
+      });
+    }
+
+    return diagnosis;
+  },
+
+  // 🆕 强制修复WebSocket连接
+  forceFixConnection: async () => {
+    console.log('[DEBUG] 🔧 开始强制修复WebSocket连接...');
+
+    if (!app.currentUser) {
+      console.error('[DEBUG] ❌ 无法修复：用户未登录');
+      return false;
+    }
+
+    try {
+      // 1. 断开现有连接
+      if (app.wsClient) {
+        console.log('[DEBUG] 🔌 断开现有WebSocket连接...');
+        app.wsClient.close();
+        app.wsClient = null;
+      }
+
+      // 2. 重新初始化WebSocket连接（带启动延迟检测）
+      console.log('[DEBUG] 🔄 重新初始化WebSocket连接...');
+      await app.initializeWebSocketWithStartupDelay();
+
+      // 等待3秒让连接稳定
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      const isConnected = app.wsClient?.isConnected();
+      console.log(
+        `[DEBUG] ${isConnected ? '✅' : '❌'} 修复${
+          isConnected ? '成功' : '失败'
+        }`
+      );
+
+      if (isConnected) {
+        console.log('[DEBUG] 🎉 WebSocket连接已成功修复！');
+        window.debugWebSocket.diagnoseConnection();
+      } else {
+        console.log('[DEBUG] ⚠️ 修复失败，请检查网络连接和服务器状态');
+      }
+
+      return isConnected;
+    } catch (error) {
+      console.error('[DEBUG] ❌ 修复过程中出错:', error);
+      return false;
+    }
+  },
+
+  // 🆕 检查WebSocket服务器状态
+  checkServerStatus: async () => {
+    console.log('[DEBUG] 🔍 检查WebSocket服务器状态...');
+
+    if (!app.currentUser) {
+      console.error('[DEBUG] ❌ 无法检查：用户未登录');
+      return;
+    }
+
+    const serverUrl = `wss://message.menuorg.com/app/v1/web_socket/7/${app.currentUser.user_id}`;
+    console.log('[DEBUG] 🌐 测试服务器:', serverUrl);
+
+    try {
+      const testWs = new WebSocket(serverUrl);
+
+      testWs.onopen = () => {
+        console.log('[DEBUG] ✅ WebSocket服务器可达，连接成功');
+        testWs.close();
+      };
+
+      testWs.onerror = (error) => {
+        console.error('[DEBUG] ❌ WebSocket服务器连接失败:', error);
+      };
+
+      testWs.onclose = (event) => {
+        console.log('[DEBUG] 🔌 测试连接已关闭:', event.code, event.reason);
+      };
+
+      // 10秒后超时
+      setTimeout(() => {
+        if (testWs.readyState === WebSocket.CONNECTING) {
+          console.warn('[DEBUG] ⏰ 连接超时，服务器可能不可达');
+          testWs.close();
+        }
+      }, 10000);
+    } catch (error) {
+      console.error('[DEBUG] ❌ 创建测试连接失败:', error);
+    }
+  },
+
+  // 🆕 清除所有WebSocket缓存和状态
+  clearWebSocketCache: () => {
+    console.log('[DEBUG] 🗑️ 清除WebSocket缓存和状态...');
+
+    // 清除连接状态
+    app.webSocketDisconnectTime = null;
+    app.webSocketReconnectTime = null;
+    app.lastWebSocketConnectTime = null;
+
+    // 清除客户端状态
+    if (app.wsClient) {
+      app.wsClient.clearDisconnectionTime();
+    }
+
+    // 清除本地存储中可能的WebSocket配置
+    try {
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (
+          key &&
+          (key.includes('websocket') ||
+            key.includes('ws') ||
+            key.includes('socket'))
+        ) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((key) => {
+        console.log('[DEBUG] 🗑️ 移除本地存储键:', key);
+        localStorage.removeItem(key);
+      });
+    } catch (error) {
+      console.warn('[DEBUG] ⚠️ 清除本地存储时出错:', error);
+    }
+
+    console.log('[DEBUG] ✅ WebSocket缓存和状态已清除');
+  },
+
+  // 🆕 完整的WebSocket重置和修复流程
+  fullReset: async () => {
+    console.log('[DEBUG] 🔄 开始完整的WebSocket重置和修复流程...');
+
+    // 1. 诊断当前状态
+    console.log('[DEBUG] 1️⃣ 诊断当前状态...');
+    const diagnosis = window.debugWebSocket.diagnoseConnection();
+
+    // 1.5. 检查系统启动状态
+    console.log('[DEBUG] 1.5️⃣ 检查系统启动状态...');
+    await window.debugWebSocket.checkSystemStartupStatus();
+
+    // 2. 清除缓存
+    console.log('[DEBUG] 2️⃣ 清除缓存和状态...');
+    window.debugWebSocket.clearWebSocketCache();
+
+    // 3. 检查服务器状态
+    console.log('[DEBUG] 3️⃣ 检查服务器状态...');
+    await window.debugWebSocket.checkServerStatus();
+
+    // 等待2秒
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // 4. 强制修复连接
+    console.log('[DEBUG] 4️⃣ 强制修复连接...');
+    const fixResult = await window.debugWebSocket.forceFixConnection();
+
+    if (fixResult) {
+      // 等待5秒让连接稳定
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+
+      // 5. 最终验证
+      console.log('[DEBUG] 5️⃣ 最终验证...');
+      const finalDiagnosis = window.debugWebSocket.diagnoseConnection();
+
+      if (finalDiagnosis.websocketInfo.isConnected) {
+        console.log('[DEBUG] 🎉 完整重置成功！WebSocket连接已恢复');
+        // 测试新订单功能
+        await window.debugWebSocket.testWithRealOrder();
+      } else {
+        console.log('[DEBUG] ❌ 重置失败，可能需要手动检查配置');
+      }
+    }
+
+    console.log('[DEBUG] 🏁 完整重置流程结束');
+  },
+
+  // 错过订单相关调试保持不变...
+  checkMissedOrders: () => app.checkMissedOrdersAfterReconnect(),
+  clearDisconnectTime: () => {
+    app.webSocketDisconnectTime = null;
+    if (app.wsClient) {
+      app.wsClient.clearDisconnectionTime();
+    }
+    console.log('[DEBUG] 已清除所有断开时间记录');
+  },
+  setDisconnectTime: (minutesAgo = 10) => {
+    const disconnectTime = new Date(Date.now() - minutesAgo * 60 * 1000);
+    app.webSocketDisconnectTime = disconnectTime;
+    console.log(
+      '[DEBUG] 设置WebSocket断开时间为',
+      minutesAgo,
+      '分钟前:',
+      disconnectTime.toISOString()
+    );
+  },
+  showAllOrders: () => {
+    console.log('[DEBUG] 当前订单列表:', app.orders);
+    console.log('[DEBUG] 已打印订单ID:', Array.from(app.printedOrderIds));
+  },
+
+  // 连接测试相关
+  simulateDisconnection: () => {
+    console.log('[DEBUG] 🔌 模拟WebSocket断开...');
+    app.webSocketDisconnectTime = new Date();
+    console.log(
+      '[DEBUG] 记录断开时间:',
+      app.webSocketDisconnectTime.toISOString()
+    );
+    app.wsClient.close();
+    setTimeout(() => {
+      console.log('[DEBUG] 🔄 3秒后自动重连...');
+      app.wsClient.connect();
+    }, 3000);
+  },
+
+  forceReconnect: () => {
+    console.log('[DEBUG] 🔧 强制重连WebSocket...');
+    if (app.wsClient) {
+      app.wsClient.close();
+      setTimeout(() => app.wsClient.connect(), 1000);
+    }
+  },
+
+  // 详细状态信息
+  getDetailedStatus: () => {
+    const status = {
+      app: {
+        disconnectTime: app.webSocketDisconnectTime?.toISOString() || null,
+        lastCheckTime: app.lastOrderCheckTime?.toISOString() || null,
+        printedOrdersCount: app.printedOrderIds.size,
+        ordersCount: app.orders.length,
+      },
+      websocket: app.wsClient ? app.wsClient.getStatus() : null,
+      wsDisconnectTime: app.wsClient
+        ? app.wsClient.getLastDisconnectionTime()
+        : null,
+    };
+    console.log('[DEBUG] 📊 详细状态信息:', status);
+    return status;
+  },
+
+  // 测试最近订单
+  showRecentOrders: (minutes = 30) => {
+    const cutoffTime = new Date(Date.now() - minutes * 60 * 1000);
+    const recentOrders = app.orders.filter((order) => {
+      const orderTime = new Date(order.create_time || order.created_at);
+      return orderTime > cutoffTime;
+    });
+    console.log(
+      `[DEBUG] 📋 最近${minutes}分钟的订单 (${recentOrders.length}个):`,
+      recentOrders.map((o) => ({
+        id: o.order_id,
+        time: new Date(o.create_time || o.created_at).toISOString(),
+        status: o.order_status,
+        printed: app.printedOrderIds.has(o.order_id),
+      }))
+    );
+    return recentOrders;
+  },
+
+  // 🔧 调试工具
+  clearPrintedOrders: () => {
+    app.printedOrderIds.clear();
+    app.printedOrderTimestamps?.clear();
+    console.log('[DEBUG] ✅ 已清除所有已打印订单记录');
+  },
+
+  showPrintedOrders: () => {
+    console.log('[DEBUG] 📄 已打印订单数量:', app.printedOrderIds.size);
+    console.log('[DEBUG] 📄 已打印订单列表:', [...app.printedOrderIds]);
+    if (app.printedOrderTimestamps) {
+      console.log('[DEBUG] 📅 已打印订单时间戳:');
+      for (const [orderId, timestamp] of app.printedOrderTimestamps) {
+        console.log(`     ${orderId}: ${new Date(timestamp).toISOString()}`);
+      }
+    }
+  },
+
+  // 🆕 新增：真实订单测试
+  testWithRealOrder: async () => {
+    console.log('[DEBUG] 🔍 查找可用的真实订单进行测试...');
+
+    if (!app.orders || app.orders.length === 0) {
+      console.warn('[DEBUG] ⚠️ 没有可用的订单，先获取订单列表...');
+      await app.loadOrders();
+    }
+
+    if (app.orders.length === 0) {
+      console.error('[DEBUG] ❌ 无法获取订单列表，请检查登录状态和网络连接');
+      return;
+    }
+
+    const testOrder = app.orders[0];
+    console.log('[DEBUG] 🎯 使用订单进行测试:', {
+      id: testOrder.order_id,
+      status: testOrder.order_status,
+      time: testOrder.create_time || testOrder.created_at,
+    });
+
+    // 模拟WebSocket消息
+    const wsMessage = {
+      type: 'new_order',
+      data: {
+        order_id: testOrder.order_id,
+        created_at: new Date().toISOString(),
+      },
+    };
+
+    console.log('[DEBUG] 📤 发送WebSocket测试消息:', wsMessage);
+    app.wsClient.testNewOrderMessage(testOrder.order_id);
+  },
+
+  // 🆕 新增：检查自动打印设置
+  checkAutoPrintSettings: () => {
+    const autoPrintCheckbox = document.getElementById('autoPrint');
+    const selectedPrinters = app.printerManager.getSelectedPrinters();
+
+    const settings = {
+      autoPrintEnabled: autoPrintCheckbox?.checked || false,
+      selectedPrintersCount: selectedPrinters.length,
+      selectedPrinters: selectedPrinters.map((p) => p.name || p),
+      wsConnected: app.wsClient?.isConnected() || false,
+      userLoggedIn: !!app.currentUser,
+    };
+
+    console.log('[DEBUG] ⚙️ 自动打印设置检查:', settings);
+
+    if (!settings.autoPrintEnabled) {
+      console.warn('[DEBUG] ⚠️ 自动打印未启用！请勾选"自动打印新订单"');
+    }
+    if (settings.selectedPrintersCount === 0) {
+      console.warn('[DEBUG] ⚠️ 未选择打印机！请至少选择一台打印机');
+    }
+    if (!settings.wsConnected) {
+      console.warn('[DEBUG] ⚠️ WebSocket未连接！');
+    }
+    if (!settings.userLoggedIn) {
+      console.warn('[DEBUG] ⚠️ 用户未登录！');
+    }
+
+    return settings;
+  },
+
+  // 🆕 新增：手动触发handleNewOrder
+  triggerHandleNewOrder: async (orderData) => {
+    console.log('[DEBUG] 🔧 手动触发handleNewOrder:', orderData);
+    try {
+      await app.handleNewOrder(orderData);
+      console.log('[DEBUG] ✅ handleNewOrder执行完成');
+    } catch (error) {
+      console.error('[DEBUG] ❌ handleNewOrder执行失败:', error);
+    }
+  },
+
+  // 🆕 新增：完整的诊断流程
+  fullDiagnosis: async () => {
+    console.log('[DEBUG] 🏥 开始完整诊断...');
+
+    // 1. 检查基本设置
+    console.log('[DEBUG] 1️⃣ 检查基本设置...');
+    const settings = window.debugWebSocket.checkAutoPrintSettings();
+
+    // 2. 检查WebSocket连接
+    console.log('[DEBUG] 2️⃣ 检查WebSocket连接...');
+    window.debugWebSocket.getDetailedStatus();
+
+    // 3. 检查可用订单
+    console.log('[DEBUG] 3️⃣ 检查可用订单...');
+    window.debugWebSocket.showRecentOrders(60);
+
+    // 4. 如果一切正常，进行真实订单测试
+    if (
+      settings.autoPrintEnabled &&
+      settings.selectedPrintersCount > 0 &&
+      settings.wsConnected &&
+      settings.userLoggedIn
+    ) {
+      console.log('[DEBUG] 4️⃣ 基本设置正常，开始真实订单测试...');
+      await window.debugWebSocket.testWithRealOrder();
+    } else {
+      console.warn('[DEBUG] 4️⃣ 基本设置有问题，跳过测试');
+    }
+
+    console.log('[DEBUG] 🏁 诊断完成');
+  },
+
+  // 🆕 测试系统启动延迟机制
+  testStartupDelay: async () => {
+    console.log('[DEBUG] 🧪 测试系统启动延迟机制...');
+
+    try {
+      // 临时断开现有连接
+      if (app.wsClient) {
+        console.log('[DEBUG] 🔌 临时断开现有WebSocket连接...');
+        app.wsClient.close();
+        app.wsClient = null;
+      }
+
+      // 模拟系统刚启动的环境
+      console.log('[DEBUG] 🎭 模拟系统刚启动环境...');
+
+      // 重新初始化带延迟的WebSocket
+      await app.initializeWebSocketWithStartupDelay();
+
+      console.log('[DEBUG] ✅ 系统启动延迟测试完成');
+    } catch (error) {
+      console.error('[DEBUG] ❌ 系统启动延迟测试失败:', error);
+    }
+  },
+
+  // 🆕 检查系统启动状态
+  checkSystemStartupStatus: async () => {
+    console.log('[DEBUG] 🔍 检查系统启动状态...');
+
+    try {
+      if (window.electronAPI && window.electronAPI.getSystemStartupInfo) {
+        const startupInfo = await window.electronAPI.getSystemStartupInfo();
+        console.log('[DEBUG] 📊 系统启动信息:', {
+          isRecentlyStarted: startupInfo.isRecentlyStarted,
+          isAutoStarted: startupInfo.isAutoStarted,
+          timeSinceStartup:
+            Math.round(startupInfo.timeSinceStartup / 1000) + '秒',
+          systemStartupTime: new Date(
+            startupInfo.systemStartupTime
+          ).toISOString(),
+        });
+        return startupInfo;
+      } else {
+        console.warn('[DEBUG] ⚠️ 无法访问系统启动信息API');
+
+        // 本地检测
+        const performanceNow = performance.now();
+        const localInfo = {
+          pageSinceLoad: Math.round(performanceNow / 1000) + '秒',
+          isProbablySystemStartup: performanceNow < 300000,
+        };
+        console.log('[DEBUG] 📱 本地检测信息:', localInfo);
+        return localInfo;
+      }
+    } catch (error) {
+      console.error('[DEBUG] ❌ 检查系统启动状态失败:', error);
+      return null;
+    }
+  },
+
+  help: () => {
+    console.log(`
+🔧 WebSocket调试工具使用说明:
+
+【基础功能】
+1. debugWebSocket.testNewOrder('订单ID')     - 测试指定订单ID
+2. debugWebSocket.status()                   - 查看连接状态
+3. debugWebSocket.reconnect()                - 手动重连
+
+【新增调试功能】
+4. debugWebSocket.testWithRealOrder()        - 使用真实订单测试 ⭐
+5. debugWebSocket.checkAutoPrintSettings()   - 检查自动打印设置 ⭐
+6. debugWebSocket.fullDiagnosis()            - 完整诊断流程 ⭐
+7. debugWebSocket.triggerHandleNewOrder(orderData) - 手动触发订单处理
+
+【系统启动相关】 🆕
+8. debugWebSocket.testStartupDelay()         - 测试系统启动延迟机制 ⭐
+9. debugWebSocket.checkSystemStartupStatus() - 检查系统启动状态 ⭐
+10. debugWebSocket.diagnoseConnection()      - WebSocket连接诊断
+
+【推荐使用】
+- 首次诊断：debugWebSocket.fullDiagnosis()
+- 快速测试：debugWebSocket.testWithRealOrder()
+- 设置检查：debugWebSocket.checkAutoPrintSettings()
+- 启动问题：debugWebSocket.testStartupDelay()
+    `);
+  },
+
+  // Force Keep Alive 相关功能保持不变...
+  forceCheckAllOrders: () => app.checkMissedOrdersAfterReconnect(),
+  showConnectionStats: () => {
+    if (app.wsClient && app.wsClient.getConnectionStabilityReport) {
+      console.log('[DEBUG] 📊 连接稳定性报告:');
+      console.log(app.wsClient.getConnectionStabilityReport());
+    }
+  },
+  simulateNetworkLag: (ms = 5000) => {
+    console.log(`[DEBUG] 🐌 模拟网络延迟 ${ms}ms...`);
+    if (app.wsClient && app.wsClient.simulateNetworkLag) {
+      app.wsClient.simulateNetworkLag(ms);
+    }
+  },
+
+  enableForceKeepAlive: () => {
+    if (app.wsClient && app.wsClient.setForceKeepAlive) {
+      app.wsClient.setForceKeepAlive(true);
+      console.log('[DEBUG] ✅ 强制保持连接已启用');
+    }
+  },
+
+  disableForceKeepAlive: () => {
+    if (app.wsClient && app.wsClient.setForceKeepAlive) {
+      app.wsClient.setForceKeepAlive(false);
+      console.log('[DEBUG] ❌ 强制保持连接已禁用');
+    }
+  },
+
+  resetHeartbeat: () => {
+    if (app.wsClient && app.wsClient.forceResetHeartbeat) {
+      app.wsClient.forceResetHeartbeat();
+      console.log('[DEBUG] 💓 心跳计数器已重置');
+    }
+  },
+
+  getConnectionReport: () => {
+    if (app.wsClient && app.wsClient.getConnectionStabilityReport) {
+      return app.wsClient.getConnectionStabilityReport();
+    }
+    return null;
+  },
+
+  runStabilityTest: (durationMinutes = 10) => {
+    console.log(`[DEBUG] 🧪 开始 ${durationMinutes} 分钟稳定性测试...`);
+
+    const testData = {
+      startTime: Date.now(),
+      durationMs: durationMinutes * 60 * 1000,
+      connectionLogs: [],
+      heartbeatLogs: [],
+    };
+
+    // 每30秒记录连接状态
+    const statusInterval = setInterval(() => {
+      const status = window.debugWebSocket.getConnectionReport();
+      testData.connectionLogs.push({
+        timestamp: Date.now(),
+        status: status,
+      });
+      console.log('[DEBUG] 🔍 稳定性测试记录点:', status?.connectionState);
+    }, 30000);
+
+    // 测试结束
+    setTimeout(() => {
+      clearInterval(statusInterval);
+      const finalReport = window.debugWebSocket.getConnectionReport();
+      testData.finalReport = finalReport;
+
+      console.log('[DEBUG] 📊 稳定性测试完成:', testData);
+      console.log('[DEBUG] 📈 最终连接报告:', finalReport);
+    }, testData.durationMs);
+
+    console.log(
+      '[DEBUG] ⏱️ 稳定性测试已启动，将在',
+      durationMinutes,
+      '分钟后完成'
+    );
+    return testData;
+  },
+
+  helpForceKeepAlive: () => {
+    console.log(`
+🔧 强制保持连接调试工具:
+
+enableForceKeepAlive()   - 启用强制保持连接
+disableForceKeepAlive()  - 禁用强制保持连接
+resetHeartbeat()         - 重置心跳计数器
+getConnectionReport()    - 获取连接报告
+runStabilityTest(minutes) - 运行稳定性测试
+showConnectionStats()    - 显示连接统计
+    `);
+  },
+};

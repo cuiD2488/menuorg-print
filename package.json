@@ -1,14 +1,21 @@
 {
   "name": "restaurant-order-printer",
   "version": "1.0.0",
-  "description": "Menuorg Order Print",
+  "description": "Menuorg Order Print with Auto-Update",
   "main": "main.js",
+  "homepage": "https://github.com/cuiD2488/menuorg-print",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cuiD2488/menuorg-print.git"
+  },
   "scripts": {
     "start": "electron .",
     "build": "electron-builder",
     "build:win": "electron-builder --win",
     "dist": "electron-builder --publish=never",
-    "pack": "electron-builder --dir"
+    "pack": "electron-builder --dir",
+    "publish": "electron-builder --publish=always",
+    "release": "npm version patch && npm run publish"
   },
   "build": {
     "appId": "com.restaurant.orderprinter",
@@ -24,6 +31,13 @@
       "assets/**/*",
       "node_modules/**/*"
     ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "cuiD2488",
+        "repo": "menuorg-print"
+      }
+    ],
     "win": {
       "target": [
         {
@@ -34,7 +48,8 @@
         }
       ],
       "icon": "assets/icon.ico",
-      "requestedExecutionLevel": "asInvoker"
+      "requestedExecutionLevel": "asInvoker",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -54,7 +69,8 @@
     "restaurant",
     "printing",
     "order",
-    "electron"
+    "electron",
+    "auto-update"
   ],
   "author": "Restaurant Team",
   "license": "MIT",
@@ -62,5 +78,7 @@
     "electron": "^22.3.27",
     "electron-builder": "^26.0.12"
   },
-  "dependencies": {}
+  "dependencies": {
+    "electron-updater": "^6.1.7"
+  }
 }
