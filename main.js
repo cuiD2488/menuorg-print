@@ -384,7 +384,7 @@ function createWindow() {
     mainWindow = null;
   });
 
-  mainWindow.webContents.openDevTools();
+  // mainWindow.webContents.openDevTools();
 
   // 点击关闭按钮时最小化到托盘而不是退出
   mainWindow.on('close', (event) => {
