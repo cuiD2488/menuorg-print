@@ -1,6 +1,6 @@
 {
   "name": "restaurant-order-printer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Menuorg Order Print with Auto-Update",
   "main": "main.js",
   "homepage": "https://github.com/cuiD2488/menuorg-print",
