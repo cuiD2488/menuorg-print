@@ -1,7 +1,7 @@
 .DS_Store
 node_modules
 /screenshots
-/dist
+/dist/win-unpacked
 /dist2
 dist.zip
 dist_electron
