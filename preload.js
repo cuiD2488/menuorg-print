@@ -34,12 +34,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   isSystemRecentlyStarted: () =>
     ipcRenderer.invoke('is-system-recently-started'),
 
-  // 🔄 自动更新API
-  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
-  getUpdateStatus: () => ipcRenderer.invoke('get-update-status'),
-  downloadUpdate: () => ipcRenderer.invoke('download-update'),
-  quitAndInstall: () => ipcRenderer.invoke('quit-and-install'),
-
   // 中文编码相关API已移除
 
   // 错误监听

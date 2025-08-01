@@ -11,9 +11,6 @@ const {
 const path = require('path');
 const fs = require('fs');
 
-// 导入自动更新管理器
-const AutoUpdaterManager = require('./src/auto-updater');
-
 // 简单的配置存储
 const configPath = path.join(app.getPath('userData'), 'config.json');
 
@@ -257,7 +254,6 @@ function initAutoStart() {
 
 let mainWindow;
 let tray;
-let autoUpdater;
 
 function createWindow() {
   // 检查是否为自动启动
@@ -403,22 +399,6 @@ function createTrayMenu() {
     },
     { type: 'separator' },
     {
-      label: '🔄 检查更新',
-      click: () => {
-        if (autoUpdater && app.isPackaged) {
-          autoUpdater.checkForUpdatesManually();
-        } else {
-          if (Notification.isSupported()) {
-            new Notification({
-              title: 'MenuorgPrint',
-              body: '开发模式下无法检查更新',
-              silent: false,
-            }).show();
-          }
-        }
-      },
-    },
-    {
       label: '退出应用',
       click: () => {
         app.isQuiting = true;
@@ -552,17 +532,6 @@ app.whenReady().then(() => {
 
   // 🚀 初始化开机自动运行功能
   initAutoStart();
-
-  // 🔄 初始化自动更新功能
-  autoUpdater = new AutoUpdaterManager();
-  autoUpdater.setMainWindow(mainWindow);
-
-  // 只在生产环境中启用自动更新
-  if (app.isPackaged) {
-    autoUpdater.checkForUpdatesOnStartup();
-  } else {
-    console.log('🔧 开发模式，跳过自动更新检查');
-  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -1148,65 +1117,3 @@ function setShowAlreadyRunningDialog(enabled) {
     return false;
   }
 }
-
-// 🔄 自动更新相关的IPC处理程序
-ipcMain.handle('check-for-updates', async () => {
-  try {
-    if (autoUpdater && app.isPackaged) {
-      await autoUpdater.checkForUpdatesManually();
-      return { success: true, message: '正在检查更新...' };
-    } else {
-      return { success: false, message: '开发模式下无法检查更新' };
-    }
-  } catch (error) {
-    console.error('❌ IPC检查更新失败:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('get-update-status', async () => {
-  try {
-    if (autoUpdater) {
-      return { success: true, ...autoUpdater.getUpdateStatus() };
-    } else {
-      return {
-        success: true,
-        isChecking: false,
-        updateAvailable: false,
-        updateDownloaded: false,
-        currentVersion: require('./package.json').version,
-      };
-    }
-  } catch (error) {
-    console.error('❌ IPC获取更新状态失败:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('download-update', async () => {
-  try {
-    if (autoUpdater && app.isPackaged) {
-      autoUpdater.downloadUpdate();
-      return { success: true, message: '开始下载更新...' };
-    } else {
-      return { success: false, message: '开发模式下无法下载更新' };
-    }
-  } catch (error) {
-    console.error('❌ IPC下载更新失败:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('quit-and-install', async () => {
-  try {
-    if (autoUpdater && app.isPackaged) {
-      autoUpdater.quitAndInstall();
-      return { success: true, message: '正在重启安装更新...' };
-    } else {
-      return { success: false, message: '开发模式下无法安装更新' };
-    }
-  } catch (error) {
-    console.error('❌ IPC退出安装失败:', error);
-    return { success: false, error: error.message };
-  }
-});

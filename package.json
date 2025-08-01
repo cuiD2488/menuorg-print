@@ -1,6 +1,6 @@
 {
   "name": "restaurant-order-printer",
-  "version": "1.0.2",
+  "version": "1.0.0",
   "description": "Menuorg Order Print",
   "main": "main.js",
   "scripts": {
@@ -8,8 +8,7 @@
     "build": "electron-builder",
     "build:win": "electron-builder --win",
     "dist": "electron-builder --publish=never",
-    "pack": "electron-builder --dir",
-    "publish": "electron-builder --publish=always"
+    "pack": "electron-builder --dir"
   },
   "build": {
     "appId": "com.restaurant.orderprinter",
@@ -24,13 +23,6 @@
       "src/**/*",
       "assets/**/*",
       "node_modules/**/*"
-    ],
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "cuiD2488",
-        "repo": "menuorg-print"
-      }
     ],
     "win": {
       "target": [
@@ -70,8 +62,5 @@
     "electron": "^22.3.27",
     "electron-builder": "^26.0.12"
   },
-  "dependencies": {
-    "electron-updater": "^6.1.7",
-    "fs-extra": "^11.3.0"
-  }
+  "dependencies": {}
 }
