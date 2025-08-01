@@ -65,7 +65,21 @@ class AutoUpdaterManager {
       this.isChecking = false;
       this.updateAvailable = false;
 
-      this.showNotification('更新错误', '检查更新时发生错误，请稍后重试');
+      // 分析错误类型并提供更具体的错误信息
+      let errorMessage = '检查更新时发生错误，请稍后重试';
+
+      if (err.message && err.message.includes('No published releases')) {
+        errorMessage = '暂无发布版本，当前为最新版本';
+        console.log('ℹ️ 仓库中暂无发布版本');
+      } else if (err.message && err.message.includes('ENOTFOUND')) {
+        errorMessage = '网络连接失败，请检查网络连接';
+      } else if (err.message && err.message.includes('403')) {
+        errorMessage = 'GitHub访问受限，请稍后重试';
+      } else if (err.message && err.message.includes('404')) {
+        errorMessage = '仓库不存在或无权限访问';
+      }
+
+      this.showNotification('更新检查', errorMessage);
     });
 
     // 更新下载进度
@@ -128,11 +142,128 @@ class AutoUpdaterManager {
       console.log('🔍 手动检查更新...');
       this.manualCheck = true;
 
+      // 检查是否为开发模式
+      const { app } = require('electron');
+      if (!app.isPackaged) {
+        console.log('🔧 开发模式：模拟检查更新...');
+        this.isChecking = true;
+        this.showNotification('检查更新', '正在检查是否有新版本...');
+
+        // 模拟网络请求延迟
+        setTimeout(async () => {
+          try {
+            // 实际检查GitHub Releases
+            await this.checkGitHubReleases();
+          } catch (error) {
+            console.error('❌ 检查GitHub Releases失败:', error);
+            this.isChecking = false;
+            this.showNotification(
+              '更新检查',
+              '检查更新时发生错误：' + error.message
+            );
+          }
+        }, 2000);
+        return;
+      }
+
       autoUpdater.checkForUpdatesAndNotify();
     } catch (error) {
       console.error('❌ 手动检查更新失败:', error);
       this.showNotification('更新错误', '检查更新失败，请检查网络连接');
     }
+  }
+
+  // 开发模式下检查GitHub Releases
+  async checkGitHubReleases() {
+    const https = require('https');
+    const { version } = require('../package.json');
+
+    return new Promise((resolve, reject) => {
+      const options = {
+        hostname: 'api.github.com',
+        port: 443,
+        path: '/repos/cuiD2488/menuorg-print/releases',
+        method: 'GET',
+        headers: {
+          'User-Agent': 'MenuorgPrint-UpdateChecker',
+        },
+      };
+
+      const req = https.request(options, (res) => {
+        let data = '';
+
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+
+        res.on('end', () => {
+          this.isChecking = false;
+
+          try {
+            const releases = JSON.parse(data);
+
+            if (res.statusCode === 200) {
+              if (Array.isArray(releases) && releases.length > 0) {
+                const latestRelease = releases[0];
+                const latestVersion = latestRelease.tag_name.replace(/^v/, '');
+
+                console.log(`📦 最新发布版本: ${latestVersion}`);
+                console.log(`📦 当前版本: ${version}`);
+
+                if (this.compareVersions(latestVersion, version) > 0) {
+                  this.showNotification(
+                    '发现新版本',
+                    `发现新版本 ${latestVersion}，当前版本 ${version}`
+                  );
+                } else {
+                  this.showNotification('检查更新', '当前已是最新版本');
+                }
+                resolve();
+              } else {
+                console.log('📝 仓库中暂无发布版本');
+                this.showNotification(
+                  '检查更新',
+                  '仓库中暂无发布版本，当前为开发版本'
+                );
+                resolve();
+              }
+            } else {
+              reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+            }
+          } catch (error) {
+            reject(new Error('解析响应失败: ' + error.message));
+          }
+        });
+      });
+
+      req.on('error', (error) => {
+        this.isChecking = false;
+        reject(error);
+      });
+
+      req.setTimeout(10000, () => {
+        req.abort();
+        reject(new Error('请求超时'));
+      });
+
+      req.end();
+    });
+  }
+
+  // 简单的版本比较
+  compareVersions(v1, v2) {
+    const parts1 = v1.split('.').map((n) => parseInt(n, 10));
+    const parts2 = v2.split('.').map((n) => parseInt(n, 10));
+
+    for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+      const part1 = parts1[i] || 0;
+      const part2 = parts2[i] || 0;
+
+      if (part1 > part2) return 1;
+      if (part1 < part2) return -1;
+    }
+
+    return 0;
   }
 
   // 显示有可用更新的对话框
