@@ -108,10 +108,8 @@ class OptimizedWebSocketClient {
       'visibilitychange',
       PerformanceUtils.debounce(() => {
         if (document.visibilityState === 'visible') {
-          console.log('[OptimizedWebSocket] 页面变为可见');
           this.handlePageVisible();
         } else {
-          console.log('[OptimizedWebSocket] 页面变为隐藏');
           this.handlePageHidden();
         }
       }, 1000) // 1秒防抖

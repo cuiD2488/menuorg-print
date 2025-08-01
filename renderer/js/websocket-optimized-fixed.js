@@ -1,5 +1,5 @@
-// 优化的WebSocket客户�?
-// 修复内存泄漏，提升性能和稳定�?
+// 优化的WebSocket客户�?
+// 修复内存泄漏，提升性能和稳定�?
 
 class OptimizedWebSocketClient {
   constructor(url, options = {}) {
@@ -17,12 +17,12 @@ class OptimizedWebSocketClient {
     this.heartbeatTimeout = options.heartbeatTimeout || 10000;
     this.maxMissedHeartbeats = options.maxMissedHeartbeats || 3;
 
-    // 性能优化管理�?
+    // 性能优化管理�?
     this.eventManager = new OptimizedEventManager();
     this.timerManager = new TimerManager();
     this.cacheManager = new SmartCacheManager({ defaultTTL: 60000 });
 
-    // 状态管�?
+    // 状态管�?
     this.connectionState = 'disconnected';
     this.lastConnectionTime = null;
     this.lastMessageTime = null;
@@ -30,19 +30,19 @@ class OptimizedWebSocketClient {
     this.missedHeartbeats = 0;
     this.isDestroyed = false;
 
-    // 消息队列（优化的�?
+    // 消息队列（优化的�?
     this.messageQueue = [];
     this.maxQueueSize = options.maxQueueSize || 100;
     this.batchSize = options.batchSize || 10;
 
-    // 网络状�?
+    // 网络状�?
     this.connectionQuality = 'unknown';
     this.networkType = 'unknown';
 
     // 系统监控
     this.suspensionThreshold = 60000; // 1分钟
 
-    // 初始化监听器（优化的�?
+    // 初始化监听器（优化的�?
     this.setupOptimizedListeners();
 
     console.log('[OptimizedWebSocket] 客户端初始化完成');
@@ -61,15 +61,15 @@ class OptimizedWebSocketClient {
     // 页面状态监听（优化的）
     this.setupPageStateListeners();
 
-    // 系统监控（优化的�?
+    // 系统监控（优化的�?
     this.setupSystemMonitoring();
   }
 
-  // 网络状态监听（移除了频繁触发的事件�?
+  // 网络状态监听（移除了频繁触发的事件�?
   setupNetworkListeners() {
-    // 网络连接状�?
+    // 网络连接状�?
     this.eventManager.addEventListener(window, 'online', () => {
-      console.log('[OptimizedWebSocket] 网络已连�?);
+      console.log('[OptimizedWebSocket] 网络已连�?);
       this.networkType = this.detectNetworkType();
       this.emit('networkOnline');
       this.handleNetworkRestore();
@@ -95,26 +95,25 @@ class OptimizedWebSocketClient {
             this.networkType = newType;
             this.adaptToNetworkConditions();
           }
-        }, 5000) // 5秒节�?
+        }, 5000) // 5秒节�?
       );
     }
   }
 
   // 页面状态监听（优化的）
   setupPageStateListeners() {
-    // 页面可见性变�?
+    // 页面可见性变�?
     this.eventManager.addEventListener(
       document,
       'visibilitychange',
       PerformanceUtils.debounce(() => {
         if (document.visibilityState === 'visible') {
-          console.log('[OptimizedWebSocket] 页面变为可见');
           this.handlePageVisible();
         } else {
           console.log('[OptimizedWebSocket] 页面变为隐藏');
           this.handlePageHidden();
         }
-      }, 1000) // 1秒防�?
+      }, 1000) // 1秒防�?
     );
 
     // 窗口焦点（节流处理）
@@ -123,7 +122,7 @@ class OptimizedWebSocketClient {
       'focus',
       PerformanceUtils.throttle(() => {
         this.handleWindowFocus();
-      }, 2000) // 2秒节�?
+      }, 2000) // 2秒节�?
     );
   }
 
@@ -131,12 +130,12 @@ class OptimizedWebSocketClient {
   setupSystemMonitoring() {
     // 移除高频事件监听器，使用更优化的方案
 
-    // 只监听关键用户活动（大幅减少事件�?
+    // 只监听关键用户活动（大幅减少事件�?
     const updateActivity = PerformanceUtils.throttle(() => {
       this.lastActivityTime = Date.now();
     }, 5000); // 5秒节流，大幅减少触发频率
 
-    // 只监听关键事件，移除mousemove等高频事�?
+    // 只监听关键事件，移除mousemove等高频事�?
     this.eventManager.addEventListener(document, 'mousedown', updateActivity, {
       passive: true,
     });
@@ -147,14 +146,14 @@ class OptimizedWebSocketClient {
       passive: true,
     });
 
-    // 定期系统状态检查（降低频率�?
+    // 定期系统状态检查（降低频率�?
     this.timerManager.setInterval(
       () => {
         this.checkSystemStatus();
       },
       60000,
       'systemCheck'
-    ); // 1分钟检查一�?
+    ); // 1分钟检查一�?
   }
 
   // 处理网络恢复
@@ -173,7 +172,7 @@ class OptimizedWebSocketClient {
       this.resetReconnectAttempts();
       this.debounceReconnect();
     } else {
-      // 发送心跳检查连接质�?
+      // 发送心跳检查连接质�?
       this.sendHeartbeat();
     }
   }
@@ -189,21 +188,21 @@ class OptimizedWebSocketClient {
     this.checkSystemResume();
   }
 
-  // 检查系统状�?
+  // 检查系统状�?
   checkSystemStatus() {
     const now = Date.now();
     const timeDiff = now - this.lastActivityTime;
 
-    // 检查系统是否可能休�?
+    // 检查系统是否可能休�?
     if (timeDiff > this.suspensionThreshold) {
       console.log(
-        `[OptimizedWebSocket] 检测到可能的系统休眠，时间�? ${timeDiff}ms`
+        `[OptimizedWebSocket] 检测到可能的系统休眠，时间�? ${timeDiff}ms`
       );
       this.handleSystemResume();
     }
   }
 
-  // 检测网络类�?
+  // 检测网络类�?
   detectNetworkType() {
     if (!navigator.onLine) return 'offline';
 
@@ -221,35 +220,35 @@ class OptimizedWebSocketClient {
       case 'slow-2g':
       case '2g':
         this.heartbeatInterval = 60000; // 1分钟
-        this.reconnectInterval = 10000; // 10�?
+        this.reconnectInterval = 10000; // 10�?
         break;
       case '3g':
-        this.heartbeatInterval = 45000; // 45�?
-        this.reconnectInterval = 7000; // 7�?
+        this.heartbeatInterval = 45000; // 45�?
+        this.reconnectInterval = 7000; // 7�?
         break;
       case '4g':
       default:
-        this.heartbeatInterval = 30000; // 30�?
-        this.reconnectInterval = 5000; // 5�?
+        this.heartbeatInterval = 30000; // 30�?
+        this.reconnectInterval = 5000; // 5�?
         break;
     }
 
     console.log(`[OptimizedWebSocket] 已适应网络条件: ${this.networkType}`);
   }
 
-  // 事件发射�?
+  // 事件发射�?
   emit(event, data) {
     const handlers = this.callbacks[event] || [];
     handlers.forEach((handler) => {
       try {
         handler(data);
       } catch (error) {
-        console.error(`[OptimizedWebSocket] 事件处理器错�?(${event}):`, error);
+        console.error(`[OptimizedWebSocket] 事件处理器错�?(${event}):`, error);
       }
     });
   }
 
-  // 添加事件监听�?
+  // 添加事件监听�?
   on(event, callback) {
     if (!this.callbacks[event]) {
       this.callbacks[event] = [];
@@ -257,7 +256,7 @@ class OptimizedWebSocketClient {
     this.callbacks[event].push(callback);
   }
 
-  // 移除事件监听�?
+  // 移除事件监听�?
   off(event, callback) {
     if (!this.callbacks[event]) return;
 
@@ -267,7 +266,7 @@ class OptimizedWebSocketClient {
     }
   }
 
-  // 连接WebSocket（优化的�?
+  // 连接WebSocket（优化的�?
   async connect() {
     if (this.isDestroyed) {
       console.warn('[OptimizedWebSocket] 客户端已销毁，无法连接');
@@ -275,7 +274,7 @@ class OptimizedWebSocketClient {
     }
 
     if (this.connectionState === 'connecting') {
-      console.log('[OptimizedWebSocket] 连接正在进行�?..');
+      console.log('[OptimizedWebSocket] 连接正在进行�?..');
       return;
     }
 
@@ -312,7 +311,7 @@ class OptimizedWebSocketClient {
       this.ws.onopen = (event) => {
         this.timerManager.clearTimer('connectionTimeout');
 
-        console.log('[OptimizedWebSocket] �?连接成功');
+        console.log('[OptimizedWebSocket] �?连接成功');
         this.connectionState = 'connected';
         this.lastConnectionTime = Date.now();
         this.reconnectAttempts = 0;
@@ -327,7 +326,7 @@ class OptimizedWebSocketClient {
         // 启动心跳
         this.startHeartbeat();
 
-        // 发送队列中的消�?
+        // 发送队列中的消�?
         this.processMessageQueue();
       };
 
@@ -407,7 +406,7 @@ class OptimizedWebSocketClient {
     ) {
       this.scheduleReconnect();
     } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('[OptimizedWebSocket] �?达到最大重连次�?);
+      console.error('[OptimizedWebSocket] �?达到最大重连次�?);
       this.emit('maxReconnectAttemptsReached');
     }
   }
@@ -419,11 +418,11 @@ class OptimizedWebSocketClient {
     this.reconnectAttempts++;
     const delay = Math.min(
       this.reconnectInterval * Math.pow(1.5, this.reconnectAttempts - 1),
-      30000 // 最�?0�?
+      30000 // 最�?0�?
     );
 
     console.log(
-      `[OptimizedWebSocket] ${delay}ms 后重�?(${this.reconnectAttempts}/${this.maxReconnectAttempts})`
+      `[OptimizedWebSocket] ${delay}ms 后重�?(${this.reconnectAttempts}/${this.maxReconnectAttempts})`
     );
 
     this.timerManager.setTimeout(
@@ -464,17 +463,17 @@ class OptimizedWebSocketClient {
     );
 
     console.log(
-      `[OptimizedWebSocket] 心跳已启�?(间隔: ${this.heartbeatInterval}ms)`
+      `[OptimizedWebSocket] 心跳已启�?(间隔: ${this.heartbeatInterval}ms)`
     );
   }
 
   // 停止心跳
   stopHeartbeat() {
     this.timerManager.clearTimer('heartbeat');
-    console.log('[OptimizedWebSocket] 心跳已停�?);
+    console.log('[OptimizedWebSocket] 心跳已停�?);
   }
 
-  // 发送心�?
+  // 发送心�?
   sendHeartbeat() {
     if (this.isConnected()) {
       const heartbeat = {
@@ -485,7 +484,7 @@ class OptimizedWebSocketClient {
 
       this.sendMessage(heartbeat);
 
-      // 心跳超时检�?
+      // 心跳超时检�?
       this.timerManager.setTimeout(
         () => {
           this.missedHeartbeats++;
@@ -532,7 +531,7 @@ class OptimizedWebSocketClient {
     const baseInterval = 30000;
 
     if (document.visibilityState === 'hidden') {
-      this.heartbeatInterval = baseInterval * 2; // 页面隐藏时降低频�?
+      this.heartbeatInterval = baseInterval * 2; // 页面隐藏时降低频�?
     } else {
       this.heartbeatInterval = baseInterval;
     }
@@ -546,7 +545,7 @@ class OptimizedWebSocketClient {
   // 发送消息（优化的）
   sendMessage(data) {
     if (this.isDestroyed) {
-      console.warn('[OptimizedWebSocket] 客户端已销毁，无法发送消�?);
+      console.warn('[OptimizedWebSocket] 客户端已销毁，无法发送消�?);
       return false;
     }
 
@@ -557,12 +556,12 @@ class OptimizedWebSocketClient {
         this.lastActivityTime = Date.now();
         return true;
       } catch (error) {
-        console.error('[OptimizedWebSocket] 发送消息失�?', error);
+        console.error('[OptimizedWebSocket] 发送消息失�?', error);
         this.emit('error', error);
         return false;
       }
     } else {
-      // 添加到队�?
+      // 添加到队�?
       this.queueMessage(data);
       return false;
     }
@@ -586,7 +585,7 @@ class OptimizedWebSocketClient {
     if (this.messageQueue.length === 0) return;
 
     console.log(
-      `[OptimizedWebSocket] 处理消息队列 (${this.messageQueue.length} 条消�?`
+      `[OptimizedWebSocket] 处理消息队列 (${this.messageQueue.length} 条消�?`
     );
 
     // 批量处理消息
@@ -598,12 +597,12 @@ class OptimizedWebSocketClient {
 
       this.sendMessage(data);
 
-      // 批次间小延迟，避免阻�?
+      // 批次间小延迟，避免阻�?
       await PerformanceUtils.nextTick();
     }
   }
 
-  // 检查系统恢�?
+  // 检查系统恢�?
   checkSystemResume() {
     const now = Date.now();
     const timeDiff = now - this.lastActivityTime;
@@ -625,7 +624,7 @@ class OptimizedWebSocketClient {
     this.reconnectAttempts = 0;
   }
 
-  // 检查连接状�?
+  // 检查连接状�?
   isConnected() {
     return this.ws && this.ws.readyState === WebSocket.OPEN;
   }
@@ -641,7 +640,7 @@ class OptimizedWebSocketClient {
     }
   }
 
-  // 获取状态信�?
+  // 获取状态信�?
   getStatus() {
     return {
       connectionState: this.connectionState,
@@ -682,7 +681,7 @@ class OptimizedWebSocketClient {
       this.ws = null;
     }
 
-    // 清理管理�?
+    // 清理管理�?
     this.eventManager.cleanup();
     this.timerManager.clearAll();
     this.cacheManager.destroy();
@@ -691,7 +690,7 @@ class OptimizedWebSocketClient {
     this.callbacks = {};
     this.messageQueue = [];
 
-    console.log('[OptimizedWebSocket] 客户端已销�?);
+    console.log('[OptimizedWebSocket] 客户端已销�?);
   }
 }
 

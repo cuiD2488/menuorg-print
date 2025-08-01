@@ -470,8 +470,6 @@ class OptimizedWebSocketClient {
         } catch (error) {
           // 如果不是有效的JSON，尝试处理为纯文本消息
           if (error instanceof SyntaxError) {
-            console.log('[OptimizedWebSocket] 接收到非JSON消息:', event.data);
-
             // 处理特定的文本消息格式
             const textMessage = event.data.toString();
 
@@ -688,7 +686,6 @@ class OptimizedWebSocketClient {
               // 发送一个测试心跳
               setTimeout(() => {
                 if (this.isConnected()) {
-                  console.log('[OptimizedWebSocket] 🩺 发送额外测试心跳...');
                   this.sendHeartbeat();
                 }
               }, 2000);

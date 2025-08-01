@@ -494,13 +494,19 @@ function createTrayMenu() {
     {
       label: '🔄 检查更新',
       click: () => {
-        if (autoUpdater && app.isPackaged) {
+        console.log('🚀 [Tray] ========== 托盘检查更新点击 ==========');
+        console.log('🔍 [Tray] 检查autoUpdater实例:', !!autoUpdater);
+        console.log('📦 [Tray] 应用打包状态:', app.isPackaged);
+
+        if (autoUpdater) {
+          console.log('✅ [Tray] 调用autoUpdater.checkForUpdatesManually()...');
           autoUpdater.checkForUpdatesManually();
         } else {
+          console.log('❌ [Tray] autoUpdater实例不存在，显示通知');
           if (Notification.isSupported()) {
             new Notification({
               title: 'MenuorgPrint',
-              body: '开发模式下无法检查更新',
+              body: 'autoUpdater未初始化',
               silent: false,
             }).show();
           }
@@ -1155,15 +1161,30 @@ ipcMain.handle('is-system-recently-started', async (event) => {
 
 // 🔄 自动更新相关的IPC处理程序
 ipcMain.handle('check-for-updates', async () => {
+  console.log('🚀 [IPC] ========== 收到检查更新请求 ==========');
+
   try {
-    if (autoUpdater && app.isPackaged) {
+    console.log('🔍 [IPC] 检查autoUpdater实例:', !!autoUpdater);
+    console.log('📦 [IPC] 应用打包状态:', app.isPackaged);
+
+    if (autoUpdater) {
+      console.log('✅ [IPC] autoUpdater实例存在，调用手动检查...');
+
+      // 不管是否打包都允许检查，让AutoUpdater自己判断
       await autoUpdater.checkForUpdatesManually();
+      console.log('✅ [IPC] 手动检查调用完成');
       return { success: true, message: '正在检查更新...' };
     } else {
-      return { success: false, message: '开发模式下无法检查更新' };
+      console.log('❌ [IPC] autoUpdater实例不存在');
+      return { success: false, message: 'autoUpdater未初始化' };
     }
   } catch (error) {
-    console.error('❌ IPC检查更新失败:', error);
+    console.error('❌ [IPC] 检查更新失败:', error);
+    console.error('❌ [IPC] 错误详情:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
     return { success: false, error: error.message };
   }
 });

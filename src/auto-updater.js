@@ -16,9 +16,17 @@ class AutoUpdaterManager {
   }
 
   setupAutoUpdater() {
+    console.log('🔄 [AutoUpdater] 开始初始化自动更新器...');
+
     // 配置自动更新器
     autoUpdater.autoDownload = this.autoDownload;
     autoUpdater.autoInstallOnAppQuit = this.autoInstall;
+
+    console.log('🔄 [AutoUpdater] 配置信息:', {
+      autoDownload: this.autoDownload,
+      autoInstallOnAppQuit: this.autoInstall,
+      updateURL: autoUpdater.getFeedURL(),
+    });
 
     // 设置更新服务器（如果使用自定义服务器）
     // autoUpdater.setFeedURL({
@@ -26,20 +34,25 @@ class AutoUpdaterManager {
     //   url: 'https://your-update-server.com/updates'
     // });
 
-    console.log('🔄 自动更新器已初始化');
+    console.log('✅ [AutoUpdater] 自动更新器初始化完成');
   }
 
   setupEventHandlers() {
+    console.log('🔄 [AutoUpdater] 设置事件监听器...');
+
     // 检查更新时
     autoUpdater.on('checking-for-update', () => {
-      console.log('🔍 正在检查更新...');
+      console.log('🔍 [AutoUpdater] 检查更新事件触发');
+      console.log('🔍 [AutoUpdater] 正在检查更新...');
       this.isChecking = true;
       this.showNotification('检查更新', '正在检查是否有新版本可用...');
     });
 
     // 有可用更新时
     autoUpdater.on('update-available', (info) => {
-      console.log('✅ 发现新版本:', info.version);
+      console.log('✅ [AutoUpdater] 发现新版本事件触发');
+      console.log('✅ [AutoUpdater] 发现新版本:', info.version);
+      console.log('📦 [AutoUpdater] 更新信息:', info);
       this.isChecking = false;
       this.updateAvailable = true;
 
@@ -48,7 +61,9 @@ class AutoUpdaterManager {
 
     // 没有可用更新时
     autoUpdater.on('update-not-available', (info) => {
-      console.log('ℹ️ 当前已是最新版本');
+      console.log('ℹ️ [AutoUpdater] 无更新事件触发');
+      console.log('ℹ️ [AutoUpdater] 当前已是最新版本');
+      console.log('📦 [AutoUpdater] 版本信息:', info);
       this.isChecking = false;
       this.updateAvailable = false;
 
@@ -61,24 +76,42 @@ class AutoUpdaterManager {
 
     // 更新错误时
     autoUpdater.on('error', (err) => {
-      console.error('❌ 更新检查失败:', err);
+      console.error('❌ [AutoUpdater] 更新错误事件触发');
+      console.error('❌ [AutoUpdater] 错误详情:', err);
+      console.error('❌ [AutoUpdater] 错误消息:', err.message);
+      console.error('❌ [AutoUpdater] 错误堆栈:', err.stack);
+      console.error('❌ [AutoUpdater] 错误代码:', err.code);
+      console.error('❌ [AutoUpdater] 错误类型:', typeof err);
+      console.error(
+        '❌ [AutoUpdater] 完整错误对象:',
+        JSON.stringify(err, Object.getOwnPropertyNames(err), 2)
+      );
+
       this.isChecking = false;
       this.updateAvailable = false;
 
       // 分析错误类型并提供更具体的错误信息
       let errorMessage = '检查更新时发生错误，请稍后重试';
 
+      console.log('🔍 [AutoUpdater] 开始分析错误类型...');
+
       if (err.message && err.message.includes('No published releases')) {
         errorMessage = '暂无发布版本，当前为最新版本';
-        console.log('ℹ️ 仓库中暂无发布版本');
+        console.log('ℹ️ [AutoUpdater] 识别为：仓库中暂无发布版本');
       } else if (err.message && err.message.includes('ENOTFOUND')) {
         errorMessage = '网络连接失败，请检查网络连接';
+        console.log('ℹ️ [AutoUpdater] 识别为：网络连接失败');
       } else if (err.message && err.message.includes('403')) {
         errorMessage = 'GitHub访问受限，请稍后重试';
+        console.log('ℹ️ [AutoUpdater] 识别为：GitHub访问受限');
       } else if (err.message && err.message.includes('404')) {
         errorMessage = '仓库不存在或无权限访问';
+        console.log('ℹ️ [AutoUpdater] 识别为：仓库不存在或无权限');
+      } else {
+        console.log('⚠️ [AutoUpdater] 未识别的错误类型');
       }
 
+      console.log('📢 [AutoUpdater] 最终错误消息:', errorMessage);
       this.showNotification('更新检查', errorMessage);
     });
 
@@ -134,28 +167,35 @@ class AutoUpdaterManager {
   // 手动检查更新
   async checkForUpdatesManually() {
     try {
+      console.log('🚀 [AutoUpdater] ========== 手动检查更新开始 ==========');
+      console.log('🚀 [AutoUpdater] 检查当前状态...');
+
       if (this.isChecking) {
+        console.log('⚠️ [AutoUpdater] 正在检查中，跳过重复请求');
         this.showNotification('检查更新', '正在检查更新中，请稍候...');
         return;
       }
 
-      console.log('🔍 手动检查更新...');
+      console.log('🔍 [AutoUpdater] 开始手动检查更新...');
       this.manualCheck = true;
 
       // 检查是否为开发模式
       const { app } = require('electron');
-      if (!app.isPackaged) {
-        console.log('🔧 开发模式：模拟检查更新...');
+      const isPackaged = app.isPackaged;
+      console.log('📦 [AutoUpdater] 应用打包状态:', isPackaged);
+
+      if (!isPackaged) {
+        console.log('🔧 [AutoUpdater] 开发模式：使用自定义检查方式...');
         this.isChecking = true;
         this.showNotification('检查更新', '正在检查是否有新版本...');
 
         // 模拟网络请求延迟
         setTimeout(async () => {
           try {
-            // 实际检查GitHub Releases
+            console.log('🌐 [AutoUpdater] 开始检查GitHub Releases...');
             await this.checkGitHubReleases();
           } catch (error) {
-            console.error('❌ 检查GitHub Releases失败:', error);
+            console.error('❌ [AutoUpdater] 检查GitHub Releases失败:', error);
             this.isChecking = false;
             this.showNotification(
               '更新检查',
@@ -166,9 +206,29 @@ class AutoUpdaterManager {
         return;
       }
 
-      autoUpdater.checkForUpdatesAndNotify();
+      console.log('📦 [AutoUpdater] 生产模式：使用electron-updater检查...');
+      console.log(
+        '🔄 [AutoUpdater] 调用 autoUpdater.checkForUpdatesAndNotify()...'
+      );
+
+      // 添加更多调试信息
+      console.log('📋 [AutoUpdater] 当前配置:');
+      console.log('   - Feed URL:', autoUpdater.getFeedURL());
+      console.log('   - Auto Download:', autoUpdater.autoDownload);
+      console.log(
+        '   - Auto Install on Quit:',
+        autoUpdater.autoInstallOnAppQuit
+      );
+
+      const result = await autoUpdater.checkForUpdatesAndNotify();
+      console.log('✅ [AutoUpdater] checkForUpdatesAndNotify 完成:', result);
     } catch (error) {
-      console.error('❌ 手动检查更新失败:', error);
+      console.error('❌ [AutoUpdater] 手动检查更新异常:', error);
+      console.error('❌ [AutoUpdater] 异常详情:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      });
       this.showNotification('更新错误', '检查更新失败，请检查网络连接');
     }
   }

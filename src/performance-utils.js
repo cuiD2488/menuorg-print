@@ -138,7 +138,6 @@ class TimerManager {
       name: name || `timeout_${timerId}`,
     });
 
-    console.log(`[TimerManager] 已创建定时器: ${key} (延迟: ${delay}ms)`);
     return timer;
   }
 
