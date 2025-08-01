@@ -1,8 +1,8 @@
-version: 1.0.0
+version: 1.0.1
 files:
-  - url: MenuorgPrint-Setup-1.0.0.exe
-    sha512: E2ZWD/ed+2dT7QsVyltvn/i4Dv1ESqydkOmnsaNhpiWKYHZNC3MDlzxGP/QrXOp3MkVx0qQtL6GhIMzO1zX9Dg==
-    size: 68976309
-path: MenuorgPrint-Setup-1.0.0.exe
-sha512: E2ZWD/ed+2dT7QsVyltvn/i4Dv1ESqydkOmnsaNhpiWKYHZNC3MDlzxGP/QrXOp3MkVx0qQtL6GhIMzO1zX9Dg==
-releaseDate: '2025-07-30T10:13:02.535Z'
+  - url: MenuorgPrint-Setup-1.0.1.exe
+    sha512: +2h0GYFg2CKXiAcsJwnaZfNtPAgaMY7NEK03jCDB9A8QRgZEKYi7oh44sYc7sXrSDhQg71MLNWdb5lBo9U7tdQ==
+    size: 69120718
+path: MenuorgPrint-Setup-1.0.1.exe
+sha512: +2h0GYFg2CKXiAcsJwnaZfNtPAgaMY7NEK03jCDB9A8QRgZEKYi7oh44sYc7sXrSDhQg71MLNWdb5lBo9U7tdQ==
+releaseDate: '2025-08-01T06:11:56.721Z'
