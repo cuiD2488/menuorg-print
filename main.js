@@ -7,9 +7,83 @@ const {
   Tray,
   Menu,
   nativeImage,
+  session,
 } = require('electron');
 const path = require('path');
+const os = require('os');
 const fs = require('fs');
+
+const isWindows = process.platform === 'win32';
+
+const compatibilityInfo = assessSystemCompatibility();
+
+if (process.env.MENUORG_DISABLE_GPU === '1' || (isWindows && process.arch === 'ia32')) {
+  console.log('[LowResource] disable hardware acceleration');
+  app.disableHardwareAcceleration();
+}
+
+function assessSystemCompatibility() {
+  const info = {
+    platform: process.platform,
+    arch: process.arch,
+    osRelease: os.release(),
+    supported: true,
+    minimumSupportedWindowsBuild: '10.0.10240',
+    recommendedScript: 'npm run build:win:x64',
+    recommendedPackageHint: null,
+    warnings: [],
+  };
+
+  if (!isWindows) {
+    return info;
+  }
+
+  const [major, minor, build] = os
+    .release()
+    .split('.')
+    .map((value) => parseInt(value, 10) || 0);
+
+  if (major < 10) {
+    info.supported = false;
+    info.recommendedScript = 'npm run build:legacy';
+    info.recommendedPackageHint = 'MenuorgPrint-win7-ia32-<version>.exe';
+    info.warnings.push(
+      'Electron 22 only supports Windows 10+. Use npm run build:legacy for Windows 7/8 targets.'
+    );
+    return info;
+  }
+
+  if (major === 10 && build > 0 && build < 10240) {
+    info.warnings.push('Detected an early Windows 10 build. Validate the legacy package if issues appear.');
+  }
+
+  if (process.arch === 'ia32') {
+    info.recommendedScript = 'npm run build:win:ia32';
+    info.recommendedPackageHint = 'MenuorgPrint-win32-ia32-<version>.exe';
+  } else if (process.arch === 'arm64') {
+    info.recommendedScript = 'npm run build:win10';
+    info.recommendedPackageHint = 'MenuorgPrint-win32-arm64-<version>.exe';
+  } else {
+    info.recommendedScript = 'npm run build:win:x64';
+    info.recommendedPackageHint = 'MenuorgPrint-win32-x64-<version>.exe';
+  }
+
+  return info;
+}
+
+async function tuneSessionCache() {
+  if (!session || !session.defaultSession) {
+    return;
+  }
+  try {
+    await session.defaultSession.clearCache();
+    if (typeof session.defaultSession.setCacheSize === 'function') {
+      await session.defaultSession.setCacheSize(32 * 1024 * 1024);
+    }
+  } catch (error) {
+    console.warn('[Performance] Unable to adjust session cache size:', error);
+  }
+}
 
 // 导入自动更新管理器
 const AutoUpdaterManager = require('./src/auto-updater');
@@ -364,11 +438,16 @@ function createWindow() {
     minHeight: 700,
     show: !isAutoStart, // 自动启动时不显示窗口
     autoHideMenuBar: true,
+    useContentSize: true,
+    backgroundColor: '#ffffff',
     icon: path.join(__dirname, 'icon.ico'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
+      spellcheck: false,
+      backgroundThrottling: true,
+      devTools: !app.isPackaged,
     },
   });
 
@@ -718,7 +797,15 @@ function createTray() {
   console.log('✅ 托盘创建完成');
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await tuneSessionCache();
+  if (isWindows) {
+    if (!compatibilityInfo.supported) {
+      console.warn('[Compatibility] Detected Windows release below 10. Please deploy the legacy installer (npm run build:legacy).');
+    } else if (compatibilityInfo.warnings.length) {
+      compatibilityInfo.warnings.forEach((warning) => console.warn(`[Compatibility] ${warning}`));
+    }
+  }
   // 🚀 检查是否需要延迟启动
   if (shouldDelayStartup()) {
     // 需要延迟启动，只创建托盘，不创建窗口
@@ -1160,6 +1247,8 @@ ipcMain.handle('is-system-recently-started', async (event) => {
 });
 
 // 🔄 自动更新相关的IPC处理程序
+ipcMain.handle('get-compatibility-info', async () => compatibilityInfo);
+
 ipcMain.handle('check-for-updates', async () => {
   console.log('🚀 [IPC] ========== 收到检查更新请求 ==========');
 

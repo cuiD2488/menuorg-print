@@ -1,4 +1,11 @@
-﻿# MenuorgPrint 维护记录
+# MenuorgPrint 维护记录
+
+## 2025-10-23 · 打包矩阵与兼容性治理
+- **交付**：调整 electron-builder 配置，新增多架构产物脚本（x64/ia32/arm64）、Win10+ Web 安装器以及 Windows 7/8 兼容构建配置；生成产物命名规范为 `MenuorgPrint-win32-<arch>-<version>.exe`，兼容包输出至 `dist/legacy/`。
+- **优化**：默认启用 ASAR 与 maximum 压缩等级，排除文档/日志/缓存目录以缩小安装包体积，同时禁用 npm rebuild。
+- **运行改进**：主进程新增低资源模式与缓存调优（清理 + 32MB 限额），限制渲染进程拼写检查，暴露 `electronAPI.getCompatibilityInfo` 以便前端识别推荐构建。
+- **兼容性**：启动时记录 Windows 版本并输出推荐脚本，检测到 Windows 10 以下版本时提示切换 legacy 包。
+- **脚本**：新增 `npm run build:win:*`、`npm run build:win10`、`npm run build:legacy` 供 CI/手动选择目标。
 
 记录关键交付、问题修复与未完事项，便于后续迭代追踪。
 

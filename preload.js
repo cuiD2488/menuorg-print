@@ -40,6 +40,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   downloadUpdate: () => ipcRenderer.invoke('download-update'),
   quitAndInstall: () => ipcRenderer.invoke('quit-and-install'),
 
+  getCompatibilityInfo: () => ipcRenderer.invoke('get-compatibility-info'),
+
   // 中文编码相关API已移除
 
   // 错误监听

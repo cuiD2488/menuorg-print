@@ -92,12 +92,21 @@ MenuorgPrint 是一套面向餐饮场景的桌面打印解决方案，基于 Ele
    npm start        # 连接真实 CLodop
    ```
 3. **构建与打包**
+   常用脚本：
    ```bash
-   npm run build        # 生成 dist/win-unpacked
-   npm run build:win    # 仅构建 Windows 安装包
-   npm run publish      # 构建并上传 GitHub Releases
+   npm run build            # 生成 dist/win-unpacked（按当前配置）
+   npm run build:win:all    # 一次输出 x64/ia32/arm64 安装包
+   npm run build:win:x64    # Windows 10/11 64 位安装包
+   npm run build:win:ia32   # Windows 10（含 32 位设备）安装包
+   npm run build:win:arm64  # Windows 11 on ARM 安装包
+   npm run build:win10      # Win10+ 通用 Web 安装器（x64/arm64）
+   npm run build:legacy     # Windows 7/8 兼容包（Electron 19，输出 dist/legacy）
+   npm run publish          # 构建并上传 GitHub Releases
    ```
 4. **运行环境要求**：需预先安装 CLodop 打印服务并确保目标打印机驱动就绪。
+
+> ⚠️ Electron 22 仅支持 Windows 10/11。若需要兼容 Windows 7/8/8.1，请运行 `npm run build:legacy` 并分发 dist/legacy 下的安装包。
+> 如需在低配设备上进一步降低资源占用，可在启动前设置环境变量 `MENUORG_DISABLE_GPU=1`。
 
 ## 配置与持久化要点
 - `config.json`：保存开机自启、程序已运行提示、打印机偏好等布尔/时间戳字段。
