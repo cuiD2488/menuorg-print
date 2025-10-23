@@ -1,117 +1,119 @@
 {
-    "name":  "restaurant-order-printer",
-    "version":  "1.0.2",
-    "description":  "Menuorg Order Print with Auto-Update",
-    "main":  "main.js",
-    "homepage":  "https://github.com/cuiD2488/menuorg-print",
-    "repository":  {
-                       "type":  "git",
-                       "url":  "https://github.com/cuiD2488/menuorg-print.git"
-                   },
-    "scripts":  {
-                    "start":  "electron .",
-                    "build":  "electron-builder",
-                    "build:win":  "electron-builder --win",
-                    "dist":  "electron-builder --publish=never",
-                    "pack":  "electron-builder --dir",
-                    "publish":  "electron-builder --publish=always",
-                    "release":  "npm version patch \u0026\u0026 npm run publish",
-                    "build:win:x64":  "electron-builder --win nsis --x64",
-                    "build:win:ia32":  "electron-builder --win nsis --ia32",
-                    "build:win:arm64":  "electron-builder --win nsis --arm64",
-                    "build:win:all":  "electron-builder --win nsis --x64 --ia32 --arm64",
-                    "build:win10":  "electron-builder --win nsis-web --x64 --arm64",
-                    "build:legacy":  "electron-builder --config electron-builder.legacy.json --win --ia32"
-                },
-    "build":  {
-                  "appId":  "com.restaurant.orderprinter",
-                  "productName":  "MenuorgPrint",
-                  "directories":  {
-                                      "output":  "dist"
-                                  },
-                  "files":  [
-                                "main.js",
-                                "preload.js",
-                                "renderer/**/*",
-                                "src/**/*",
-                                "assets/**/*",
-                                "!**/*.map",
-                                "!**/*.ts",
-                                "!**/*.test.*",
-                                "!**/__tests__/**",
-                                "!docs/**",
-                                "!dist/**",
-                                "!**/*.log",
-                                "!**/*.md",
-                                "!**/README",
-                                "!node_modules/.cache/**"
-                            ],
-                  "publish":  [
-                                  {
-                                      "provider":  "github",
-                                      "owner":  "cuiD2488",
-                                      "repo":  "menuorg-print"
-                                  }
-                              ],
-                  "win":  {
-                              "target":  [
-                                             {
-                                                 "target":  "nsis",
-                                                 "arch":  [
-                                                              "x64",
-                                                              "ia32",
-                                                              "arm64"
-                                                          ]
-                                             },
-                                             {
-                                                 "target":  "nsis-web",
-                                                 "arch":  [
-                                                              "x64",
-                                                              "arm64"
-                                                          ]
-                                             }
-                                         ],
-                              "icon":  "assets/icon.ico",
-                              "requestedExecutionLevel":  "asInvoker",
-                              "artifactName":  "${productName}-${os}-${arch}-${version}.${ext}"
-                          },
-                  "nsis":  {
-                               "oneClick":  false,
-                               "perMachine":  false,
-                               "allowToChangeInstallationDirectory":  true,
-                               "createDesktopShortcut":  true,
-                               "createStartMenuShortcut":  true,
-                               "shortcutName":  "MenuorgPrint",
-                               "installerIcon":  "assets/icon.ico",
-                               "uninstallerIcon":  "assets/icon.ico",
-                               "allowElevation":  true,
-                               "runAfterFinish":  true,
-                               "menuCategory":  "Restaurant Tools"
-                           },
-                  "nsisWeb":  {
-                                  "createDesktopShortcut":  true,
-                                  "shortcutName":  "MenuorgPrint",
-                                  "artifactName":  "${productName}-WebSetup-${version}-${arch}.${ext}"
-                              },
-                  "asar":  true,
-                  "compression":  "maximum",
-                  "npmRebuild":  false,
-                  "artifactName":  "${productName}-${os}-${arch}-${version}.${ext}"
-              },
-    "keywords":  [
-                     "restaurant",
-                     "printing",
-                     "order",
-                     "electron",
-                     "auto-update"
-                 ],
-    "author":  "Restaurant Team",
-    "license":  "MIT",
-    "devDependencies":  {
-                            "electron":  "^22.3.27",
-                            "electron-builder":  "^26.0.12"
-                        },
-    "dependencies":  {
-                         "electron-updater":  "^6.1.7"
-                     }
+  "name": "restaurant-order-printer",
+  "version": "1.0.2",
+  "description": "Menuorg Order Print with Auto-Update",
+  "main": "main.js",
+  "homepage": "https://github.com/cuiD2488/menuorg-print",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cuiD2488/menuorg-print.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "dist": "electron-builder --publish=never",
+    "pack": "electron-builder --dir",
+    "publish": "electron-builder --publish=always",
+    "release": "npm version patch && npm run publish",
+    "build:win:x64": "electron-builder --win nsis --x64",
+    "build:win:ia32": "electron-builder --win nsis --ia32",
+    "build:win:arm64": "electron-builder --win nsis --arm64",
+    "build:win:all": "electron-builder --win nsis --x64 --ia32 --arm64",
+    "build:win10": "electron-builder --win nsis-web --x64 --arm64",
+    "build:legacy": "electron-builder --config electron-builder.legacy.json --win --ia32",
+    "build:core": "cross-env MENUORG_CORE_BUILD=1 MENUORG_DISABLE_AUTO_UPDATE=1 electron-builder --config electron-builder.core.json"
+  },
+  "build": {
+    "appId": "com.restaurant.orderprinter",
+    "productName": "MenuorgPrint",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "src/**/*",
+      "assets/**/*",
+      "!**/*.map",
+      "!**/*.ts",
+      "!**/*.test.*",
+      "!**/__tests__/**",
+      "!docs/**",
+      "!dist/**",
+      "!**/*.log",
+      "!**/*.md",
+      "!**/README",
+      "!node_modules/.cache/**"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "cuiD2488",
+        "repo": "menuorg-print"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32",
+            "arm64"
+          ]
+        },
+        {
+          "target": "nsis-web",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "requestedExecutionLevel": "asInvoker",
+      "artifactName": "${productName}-${os}-${arch}-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "MenuorgPrint",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "allowElevation": true,
+      "runAfterFinish": true,
+      "menuCategory": "Restaurant Tools"
+    },
+    "nsisWeb": {
+      "createDesktopShortcut": true,
+      "shortcutName": "MenuorgPrint",
+      "artifactName": "${productName}-WebSetup-${version}-${arch}.${ext}"
+    },
+    "asar": true,
+    "compression": "maximum",
+    "npmRebuild": false,
+    "artifactName": "${productName}-${os}-${arch}-${version}.${ext}"
+  },
+  "keywords": [
+    "restaurant",
+    "printing",
+    "order",
+    "electron",
+    "auto-update"
+  ],
+  "author": "Restaurant Team",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^22.3.27",
+    "electron-builder": "^26.0.12",
+    "cross-env": "^7.0.3"
+  },
+  "dependencies": {
+    "electron-updater": "^6.1.7"
+  }
 }

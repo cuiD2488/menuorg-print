@@ -3,22 +3,59 @@ const { dialog, Notification, BrowserWindow } = require('electron');
 const path = require('path');
 
 class AutoUpdaterManager {
-  constructor() {
+  constructor(options = {}) {
+    const {
+      compatibilityInfo = { supported: true, warnings: [] },
+      isCoreBuild = false,
+      buildVariant = 'full',
+    } = options;
+
     this.mainWindow = null;
+    this.compatibilityInfo = compatibilityInfo;
+    this.buildVariant = buildVariant;
+    this.isCoreBuild = isCoreBuild;
+
+    this.manualCheck = false;
     this.isChecking = false;
     this.updateAvailable = false;
     this.updateDownloaded = false;
-    this.autoDownload = true; // 自动下载更新
-    this.autoInstall = false; // 不自动安装，需要用户确认
+    this.availableVersion = null;
+    this.lastUpdateInfo = null;
+    this.lastCheckAt = null;
+    this.lastDownloadAt = null;
+    this.lastError = null;
+    this.downloadProgress = null;
+    this.downloadProgressWindow = null;
+
+    this.autoDownload = true;
+    this.autoInstall = false;
+
+    this.disabledReason = null;
+    if (process.env.MENUORG_DISABLE_AUTO_UPDATE === '1') {
+      this.disabledReason = 'env-disabled';
+    } else if (!this.compatibilityInfo.supported) {
+      this.disabledReason = 'unsupported-os';
+    } else if (this.isCoreBuild) {
+      this.disabledReason = 'core-build';
+    }
+
+    this.autoUpdateDisabled = this.disabledReason !== null;
 
     this.setupAutoUpdater();
     this.setupEventHandlers();
   }
 
   setupAutoUpdater() {
-    console.log('🔄 [AutoUpdater] 开始初始化自动更新器...');
+    console.log('🔄 [AutoUpdater] 开始初始化自动更新器...', {
+      disabled: this.autoUpdateDisabled,
+      reason: this.disabledReason,
+    });
 
-    // 配置自动更新器
+    if (this.autoUpdateDisabled) {
+      console.log('⚠️ [AutoUpdater] 自动更新已禁用，跳过初始化。');
+      return;
+    }
+
     autoUpdater.autoDownload = this.autoDownload;
     autoUpdater.autoInstallOnAppQuit = this.autoInstall;
 
@@ -28,94 +65,107 @@ class AutoUpdaterManager {
       updateURL: autoUpdater.getFeedURL(),
     });
 
-    // 设置更新服务器（如果使用自定义服务器）
-    // autoUpdater.setFeedURL({
-    //   provider: 'generic',
-    //   url: 'https://your-update-server.com/updates'
-    // });
-
     console.log('✅ [AutoUpdater] 自动更新器初始化完成');
   }
 
   setupEventHandlers() {
     console.log('🔄 [AutoUpdater] 设置事件监听器...');
 
-    // 检查更新时
+    if (this.autoUpdateDisabled) {
+      console.log('⚠️ [AutoUpdater] 自动更新已禁用，不注册事件监听器。');
+      return;
+    }
+
     autoUpdater.on('checking-for-update', () => {
       console.log('🔍 [AutoUpdater] 检查更新事件触发');
       console.log('🔍 [AutoUpdater] 正在检查更新...');
       this.isChecking = true;
-      this.showNotification('检查更新', '正在检查是否有新版本可用...');
+      this.lastCheckAt = new Date().toISOString();
+      this.lastError = null;
+      this.availableVersion = null;
+      this.lastUpdateInfo = null;
+      this.downloadProgress = null;
+      this.updateDownloaded = false;
+      if (this.manualCheck) {
+        this.showNotification('检查更新', '正在检查是否有新版本可用...');
+      }
     });
 
-    // 有可用更新时
     autoUpdater.on('update-available', (info) => {
       console.log('✅ [AutoUpdater] 发现新版本事件触发');
       console.log('✅ [AutoUpdater] 发现新版本:', info.version);
       console.log('📦 [AutoUpdater] 更新信息:', info);
       this.isChecking = false;
       this.updateAvailable = true;
+      this.updateDownloaded = false;
+      this.availableVersion = info.version;
+      this.lastUpdateInfo = info;
+      this.lastError = null;
+      this.downloadProgress = null;
+      this.manualCheck = false;
 
       this.showUpdateAvailableDialog(info);
     });
 
-    // 没有可用更新时
     autoUpdater.on('update-not-available', (info) => {
       console.log('ℹ️ [AutoUpdater] 无更新事件触发');
       console.log('ℹ️ [AutoUpdater] 当前已是最新版本');
       console.log('📦 [AutoUpdater] 版本信息:', info);
       this.isChecking = false;
       this.updateAvailable = false;
+      this.updateDownloaded = false;
+      this.availableVersion = null;
+      this.lastUpdateInfo = null;
+      this.downloadProgress = null;
+      this.lastError = null;
 
-      // 只有手动检查时才显示"已是最新版本"的通知
       if (this.manualCheck) {
         this.showNotification('检查更新', '当前已是最新版本');
         this.manualCheck = false;
       }
     });
 
-    // 更新错误时
     autoUpdater.on('error', (err) => {
       console.error('❌ [AutoUpdater] 更新错误事件触发');
       console.error('❌ [AutoUpdater] 错误详情:', err);
-      console.error('❌ [AutoUpdater] 错误消息:', err.message);
-      console.error('❌ [AutoUpdater] 错误堆栈:', err.stack);
-      console.error('❌ [AutoUpdater] 错误代码:', err.code);
-      console.error('❌ [AutoUpdater] 错误类型:', typeof err);
-      console.error(
-        '❌ [AutoUpdater] 完整错误对象:',
-        JSON.stringify(err, Object.getOwnPropertyNames(err), 2)
-      );
 
       this.isChecking = false;
       this.updateAvailable = false;
+      this.updateDownloaded = false;
+      this.manualCheck = false;
+      this.downloadProgress = null;
 
-      // 分析错误类型并提供更具体的错误信息
       let errorMessage = '检查更新时发生错误，请稍后重试';
+      const message = err && err.message ? err.message : '';
 
-      console.log('🔍 [AutoUpdater] 开始分析错误类型...');
-
-      if (err.message && err.message.includes('No published releases')) {
-        errorMessage = '暂无发布版本，当前为最新版本';
-        console.log('ℹ️ [AutoUpdater] 识别为：仓库中暂无发布版本');
-      } else if (err.message && err.message.includes('ENOTFOUND')) {
+      if (message.includes('No published releases')) {
+        errorMessage = '仓库暂无发布版本，当前为开发版本';
+      } else if (message.includes('ENOTFOUND')) {
         errorMessage = '网络连接失败，请检查网络连接';
-        console.log('ℹ️ [AutoUpdater] 识别为：网络连接失败');
-      } else if (err.message && err.message.includes('403')) {
-        errorMessage = 'GitHub访问受限，请稍后重试';
-        console.log('ℹ️ [AutoUpdater] 识别为：GitHub访问受限');
-      } else if (err.message && err.message.includes('404')) {
+      } else if (message.includes('403')) {
+        errorMessage = 'GitHub 访问受限，请稍后重试';
+      } else if (message.includes('404')) {
         errorMessage = '仓库不存在或无权限访问';
-        console.log('ℹ️ [AutoUpdater] 识别为：仓库不存在或无权限');
-      } else {
-        console.log('⚠️ [AutoUpdater] 未识别的错误类型');
+      } else if (this.autoUpdateDisabled && this.disabledReason === 'unsupported-os') {
+        errorMessage = '当前系统版本不支持自动更新，请使用 legacy 安装包手动升级。';
+      } else if (this.autoUpdateDisabled && this.disabledReason === 'core-build') {
+        errorMessage = '当前为核心精简版，不提供自动更新。';
       }
 
-      console.log('📢 [AutoUpdater] 最终错误消息:', errorMessage);
+      this.lastError = {
+        timestamp: new Date().toISOString(),
+        message: errorMessage,
+        raw: this.serializeError(err),
+      };
+
+      if (this.downloadProgressWindow) {
+        this.downloadProgressWindow.close();
+        this.downloadProgressWindow = null;
+      }
+
       this.showNotification('更新检查', errorMessage);
     });
 
-    // 更新下载进度
     autoUpdater.on('download-progress', (progressObj) => {
       const percent = Math.round(progressObj.percent);
       console.log(
@@ -124,7 +174,14 @@ class AutoUpdaterManager {
         )}/${this.formatBytes(progressObj.total)})`
       );
 
-      // 更新下载进度通知
+      this.downloadProgress = {
+        percent,
+        transferred: progressObj.transferred,
+        total: progressObj.total,
+        speed: progressObj.bytesPerSecond,
+        timestamp: new Date().toISOString(),
+      };
+
       if (this.downloadProgressWindow) {
         this.downloadProgressWindow.webContents.send('download-progress', {
           percent,
@@ -135,15 +192,34 @@ class AutoUpdaterManager {
       }
     });
 
-    // 更新下载完成
     autoUpdater.on('update-downloaded', (info) => {
       console.log('✅ 更新下载完成:', info.version);
+      this.isChecking = false;
       this.updateDownloaded = true;
+      this.manualCheck = false;
+      this.lastError = null;
+      this.availableVersion = info.version || this.availableVersion;
+      this.lastUpdateInfo = info;
+      this.lastDownloadAt = new Date().toISOString();
+
+      const totalSize = Array.isArray(info && info.files)
+        ? info.files.reduce((maxSize, file) => {
+            const size = Number(file.size) || 0;
+            return size > maxSize ? size : maxSize;
+          }, 0)
+        : null;
+
+      this.downloadProgress = {
+        percent: 100,
+        transferred: totalSize,
+        total: totalSize,
+        speed: null,
+        timestamp: new Date().toISOString(),
+      };
 
       this.showUpdateReadyDialog(info);
     });
   }
-
   // 设置主窗口引用
   setMainWindow(window) {
     this.mainWindow = window;
@@ -155,81 +231,123 @@ class AutoUpdaterManager {
       console.log('🚀 启动时检查更新...');
       this.manualCheck = false;
 
-      // 延迟几秒检查，让应用完全启动
+      if (this.autoUpdateDisabled) {
+        console.log('⚠️ [AutoUpdater] 启动时跳过自动检查，原因:', this.disabledReason);
+        if (this.disabledReason === 'unsupported-os') {
+          this.showNotification('更新提示', '当前系统版本不支持自动更新，请使用 legacy 安装包手动升级。');
+        } else if (this.disabledReason === 'core-build') {
+          this.showNotification('更新提示', '当前为核心精简版，不提供自动更新。');
+        }
+        return { started: false, reason: this.disabledReason };
+      }
+
+      if (process.env.MENUORG_SKIP_STARTUP_UPDATE === '1') {
+        console.log('ℹ️ [AutoUpdater] 通过环境变量跳过启动检查');
+        return { started: false, reason: 'startup-skip' };
+      }
+
       setTimeout(() => {
         autoUpdater.checkForUpdatesAndNotify();
       }, 5000);
+
+      return { started: true };
     } catch (error) {
       console.error('❌ 启动时检查更新失败:', error);
+      return { started: false, error: error.message };
     }
   }
 
   // 手动检查更新
   async checkForUpdatesManually() {
+    const result = {
+      started: false,
+      mode: 'autoUpdater',
+      message: '',
+      reason: null,
+      compatibility: this.compatibilityInfo,
+      autoUpdateDisabled: this.autoUpdateDisabled,
+    };
+
     try {
-      console.log('🚀 [AutoUpdater] ========== 手动检查更新开始 ==========');
-      console.log('🚀 [AutoUpdater] 检查当前状态...');
+      console.log('[AutoUpdater] ===== manual check started =====');
+      console.log('[AutoUpdater] inspecting current state...');
+
+      if (this.autoUpdateDisabled) {
+        const message = this.getDisabledMessage();
+        this.showNotification('更新检查', message);
+        return { ...result, message, reason: this.disabledReason };
+      }
 
       if (this.isChecking) {
-        console.log('⚠️ [AutoUpdater] 正在检查中，跳过重复请求');
-        this.showNotification('检查更新', '正在检查更新中，请稍候...');
-        return;
+        const message = '正在检查更新中，请稍候...';
+        console.log('[AutoUpdater] already checking, skip duplicate request');
+        this.showNotification('检查更新', message);
+        return { ...result, message, reason: 'in-progress' };
       }
 
-      console.log('🔍 [AutoUpdater] 开始手动检查更新...');
+      console.log('[AutoUpdater] start manual check...');
       this.manualCheck = true;
+      this.isChecking = true;
+      this.lastCheckAt = new Date().toISOString();
+      this.lastError = null;
+      this.availableVersion = null;
+      this.downloadProgress = null;
 
-      // 检查是否为开发模式
       const { app } = require('electron');
       const isPackaged = app.isPackaged;
-      console.log('📦 [AutoUpdater] 应用打包状态:', isPackaged);
+      console.log('[AutoUpdater] packaged state:', isPackaged);
 
       if (!isPackaged) {
-        console.log('🔧 [AutoUpdater] 开发模式：使用自定义检查方式...');
-        this.isChecking = true;
-        this.showNotification('检查更新', '正在检查是否有新版本...');
+        console.log('[AutoUpdater] development mode: checking GitHub releases');
+        this.showNotification('检查更新', '开发模式：通过 GitHub Releases 检查更新');
 
-        // 模拟网络请求延迟
         setTimeout(async () => {
           try {
-            console.log('🌐 [AutoUpdater] 开始检查GitHub Releases...');
+            console.log('[AutoUpdater] checking GitHub releases...');
             await this.checkGitHubReleases();
           } catch (error) {
-            console.error('❌ [AutoUpdater] 检查GitHub Releases失败:', error);
+            console.error('[AutoUpdater] GitHub releases check failed:', error);
             this.isChecking = false;
-            this.showNotification(
-              '更新检查',
-              '检查更新时发生错误：' + error.message
-            );
+            this.lastError = {
+              timestamp: new Date().toISOString(),
+              message: error.message,
+              raw: this.serializeError(error),
+            };
+            this.showNotification('更新检查', '检查更新时发生错误：' + error.message);
           }
         }, 2000);
-        return;
+
+        return {
+          ...result,
+          started: true,
+          mode: 'development',
+          message: '开发模式：使用 GitHub Releases 检查更新',
+        };
       }
 
-      console.log('📦 [AutoUpdater] 生产模式：使用electron-updater检查...');
-      console.log(
-        '🔄 [AutoUpdater] 调用 autoUpdater.checkForUpdatesAndNotify()...'
-      );
-
-      // 添加更多调试信息
-      console.log('📋 [AutoUpdater] 当前配置:');
-      console.log('   - Feed URL:', autoUpdater.getFeedURL());
-      console.log('   - Auto Download:', autoUpdater.autoDownload);
-      console.log(
-        '   - Auto Install on Quit:',
-        autoUpdater.autoInstallOnAppQuit
-      );
-
-      const result = await autoUpdater.checkForUpdatesAndNotify();
-      console.log('✅ [AutoUpdater] checkForUpdatesAndNotify 完成:', result);
-    } catch (error) {
-      console.error('❌ [AutoUpdater] 手动检查更新异常:', error);
-      console.error('❌ [AutoUpdater] 异常详情:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
+      console.log('[AutoUpdater] production mode: using electron-updater');
+      console.log('[AutoUpdater] calling autoUpdater.checkForUpdatesAndNotify()');
+      console.log('[AutoUpdater] current config:', {
+        feedURL: autoUpdater.getFeedURL(),
+        autoDownload: autoUpdater.autoDownload,
+        autoInstallOnQuit: autoUpdater.autoInstallOnAppQuit,
       });
-      this.showNotification('更新错误', '检查更新失败，请检查网络连接');
+
+      this.showNotification('检查更新', '正在检查是否有新版本...');
+      autoUpdater.checkForUpdatesAndNotify();
+
+      return { ...result, started: true, message: '正在检查更新...' };
+    } catch (error) {
+      console.error('[AutoUpdater] manual check failed:', error);
+      this.isChecking = false;
+      this.manualCheck = false;
+      this.lastError = {
+        timestamp: new Date().toISOString(),
+        message: error.message,
+        raw: this.serializeError(error),
+      };
+      this.showNotification('更新检查', '检查更新时发生错误：' + error.message);
+      return { ...result, reason: 'exception', error: error.message };
     }
   }
 
@@ -258,52 +376,90 @@ class AutoUpdaterManager {
 
         res.on('end', () => {
           this.isChecking = false;
+          this.manualCheck = false;
+          this.lastCheckAt = new Date().toISOString();
 
           try {
             const releases = JSON.parse(data);
+
+            this.lastError = null;
+            this.downloadProgress = null;
 
             if (res.statusCode === 200) {
               if (Array.isArray(releases) && releases.length > 0) {
                 const latestRelease = releases[0];
                 const latestVersion = latestRelease.tag_name.replace(/^v/, '');
 
-                console.log(`📦 最新发布版本: ${latestVersion}`);
-                console.log(`📦 当前版本: ${version}`);
+                console.log(`[AutoUpdater] latest release version: ${latestVersion}`);
+                console.log(`[AutoUpdater] current version: ${version}`);
 
                 if (this.compareVersions(latestVersion, version) > 0) {
+                  this.updateAvailable = true;
+                  this.availableVersion = latestVersion;
+                  this.lastUpdateInfo = {
+                    version: latestVersion,
+                    releaseNotes: latestRelease.body,
+                  };
                   this.showNotification(
                     '发现新版本',
                     `发现新版本 ${latestVersion}，当前版本 ${version}`
                   );
                 } else {
+                  this.updateAvailable = false;
+                  this.availableVersion = null;
+                  this.lastUpdateInfo = null;
                   this.showNotification('检查更新', '当前已是最新版本');
                 }
                 resolve();
               } else {
-                console.log('📝 仓库中暂无发布版本');
-                this.showNotification(
-                  '检查更新',
-                  '仓库中暂无发布版本，当前为开发版本'
-                );
+                console.log('[AutoUpdater] no releases found');
+                this.updateAvailable = false;
+                this.availableVersion = null;
+                this.lastUpdateInfo = null;
+                this.showNotification('检查更新', '仓库中暂无发布版本，当前为开发版本');
                 resolve();
               }
             } else {
-              reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+              const error = new Error(`HTTP ${res.statusCode}: ${data}`);
+              this.lastError = {
+                timestamp: new Date().toISOString(),
+                message: error.message,
+                raw: this.serializeError(error),
+              };
+              reject(error);
             }
           } catch (error) {
+            this.lastError = {
+              timestamp: new Date().toISOString(),
+              message: error.message,
+              raw: this.serializeError(error),
+            };
             reject(new Error('解析响应失败: ' + error.message));
           }
         });
       });
-
       req.on('error', (error) => {
         this.isChecking = false;
+        this.manualCheck = false;
+        this.lastError = {
+          timestamp: new Date().toISOString(),
+          message: error.message,
+          raw: this.serializeError(error),
+        };
         reject(error);
       });
 
       req.setTimeout(10000, () => {
         req.abort();
-        reject(new Error('请求超时'));
+        const timeoutError = new Error('请求超时');
+        this.isChecking = false;
+        this.manualCheck = false;
+        this.lastError = {
+          timestamp: new Date().toISOString(),
+          message: timeoutError.message,
+          raw: this.serializeError(timeoutError),
+        };
+        reject(timeoutError);
       });
 
       req.end();
@@ -364,13 +520,37 @@ class AutoUpdaterManager {
 
   // 下载更新
   downloadUpdate() {
+    if (this.autoUpdateDisabled) {
+      const message = this.getDisabledMessage();
+      this.showNotification('下载更新', message);
+      return { success: false, message, reason: this.disabledReason };
+    }
+
     try {
-      console.log('📥 开始下载更新...');
+      console.log('[AutoUpdater] start downloading update...');
+      this.downloadProgress = {
+        percent: 0,
+        transferred: 0,
+        total: null,
+        speed: null,
+        timestamp: new Date().toISOString(),
+      };
       this.showDownloadProgress();
       autoUpdater.downloadUpdate();
+      return { success: true, message: '开始下载更新...', compatibility: this.compatibilityInfo };
     } catch (error) {
-      console.error('❌ 下载更新失败:', error);
-      this.showNotification('下载失败', '更新下载失败，请稍后重试');
+      console.error('[AutoUpdater] download update failed:', error);
+      this.lastError = {
+        timestamp: new Date().toISOString(),
+        message: error.message,
+        raw: this.serializeError(error),
+      };
+      this.showNotification('下载更新', '下载更新失败：' + error.message);
+      return {
+        success: false,
+        message: '下载更新失败：' + error.message,
+        reason: 'exception',
+      };
     }
   }
 
@@ -526,17 +706,26 @@ class AutoUpdaterManager {
   // 退出并安装更新
   quitAndInstall() {
     try {
-      console.log('🔄 正在重启并安装更新...');
+      console.log('[AutoUpdater] restarting to install update...');
       autoUpdater.quitAndInstall(false, true);
+      return { success: true, message: '应用即将重启以完成更新', compatibility: this.compatibilityInfo };
     } catch (error) {
-      console.error('❌ 重启安装失败:', error);
+      console.error('[AutoUpdater] quitAndInstall failed:', error);
+      this.lastError = {
+        timestamp: new Date().toISOString(),
+        message: error.message,
+        raw: this.serializeError(error),
+      };
       this.showNotification('安装失败', '更新安装失败，请手动重启应用');
+      return { success: false, message: '更新安装失败，请手动重启应用', reason: 'exception' };
     }
   }
 
   // 安排提醒
   scheduleReminder() {
-    // 1小时后提醒
+    if (this.autoUpdateDisabled) {
+      return;
+    }
     setTimeout(() => {
       if (this.updateAvailable && !this.updateDownloaded) {
         this.showNotification('更新提醒', '有新版本可用，点击检查更新');
@@ -567,11 +756,42 @@ class AutoUpdaterManager {
 
   // 格式化字节大小
   formatBytes(bytes) {
-    if (bytes === 0) return '0 B';
+    if (!bytes) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+  }
+
+  getDisabledMessage() {
+    if (this.disabledReason === 'unsupported-os') {
+      return '当前系统版本不支持自动更新，请使用 legacy 安装包手动升级。';
+    }
+    if (this.disabledReason === 'env-disabled') {
+      return '自动更新已通过环境变量 MENUORG_DISABLE_AUTO_UPDATE 禁用。';
+    }
+    if (this.disabledReason === 'core-build') {
+      return '当前为核心精简版，不提供自动更新。';
+    }
+    return '自动更新已禁用。';
+  }
+
+  serializeError(error) {
+    if (!error) {
+      return null;
+    }
+    const plain = {};
+    Object.getOwnPropertyNames(error).forEach((key) => {
+      plain[key] = error[key];
+    });
+    plain.name = error.name;
+    plain.message = error.message;
+    plain.stack = error.stack;
+    return plain;
+  }
+
+  getCompatibilityInfo() {
+    return this.compatibilityInfo;
   }
 
   // 获取更新状态
@@ -581,6 +801,15 @@ class AutoUpdaterManager {
       updateAvailable: this.updateAvailable,
       updateDownloaded: this.updateDownloaded,
       currentVersion: require('../package.json').version,
+      availableVersion: this.availableVersion,
+      lastCheckAt: this.lastCheckAt,
+      lastDownloadAt: this.lastDownloadAt,
+      lastError: this.lastError,
+      downloadProgress: this.downloadProgress,
+      autoUpdateDisabled: this.autoUpdateDisabled,
+      disabledReason: this.disabledReason,
+      compatibility: this.compatibilityInfo,
+      buildVariant: this.buildVariant,
     };
   }
 }

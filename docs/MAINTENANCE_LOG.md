@@ -1,11 +1,13 @@
-# MenuorgPrint 维护记录
+﻿# MenuorgPrint 维护记录
 
 ## 2025-10-23 · 打包矩阵与兼容性治理
 - **交付**：调整 electron-builder 配置，新增多架构产物脚本（x64/ia32/arm64）、Win10+ Web 安装器以及 Windows 7/8 兼容构建配置；生成产物命名规范为 `MenuorgPrint-win32-<arch>-<version>.exe`，兼容包输出至 `dist/legacy/`。
+- **核心构建**：新增 `npm run build:core` 轻量打包流程（dist/core），默认禁用自动更新，仅保留登录、打印配置与自动打印核心功能。
 - **优化**：默认启用 ASAR 与 maximum 压缩等级，排除文档/日志/缓存目录以缩小安装包体积，同时禁用 npm rebuild。
 - **运行改进**：主进程新增低资源模式与缓存调优（清理 + 32MB 限额），限制渲染进程拼写检查，暴露 `electronAPI.getCompatibilityInfo` 以便前端识别推荐构建。
 - **兼容性**：启动时记录 Windows 版本并输出推荐脚本，检测到 Windows 10 以下版本时提示切换 legacy 包。
 - **脚本**：新增 `npm run build:win:*`、`npm run build:win10`、`npm run build:legacy` 供 CI/手动选择目标。
+- **文档**：补充《Release & Update 指南》，梳理多架构发布及自动更新步骤。
 
 记录关键交付、问题修复与未完事项，便于后续迭代追踪。
 
@@ -45,3 +47,5 @@
 - **运维面板整合**：考虑在主界面内嵌调试与维护工具，取代零散测试 HTML。
 - **发布流程自动化**：可加入 CI/CD，自动构建安装包并上传 Releases，减少人工操作。
 - **日志与监控**：结合 `MemoryMonitor` 输出定期报告，必要时补充远程收集与告警机制。
+
+

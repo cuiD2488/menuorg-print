@@ -101,12 +101,19 @@ MenuorgPrint 是一套面向餐饮场景的桌面打印解决方案，基于 Ele
    npm run build:win:arm64  # Windows 11 on ARM 安装包
    npm run build:win10      # Win10+ 通用 Web 安装器（x64/arm64）
    npm run build:legacy     # Windows 7/8 兼容包（Electron 19，输出 dist/legacy）
+   npm run build:core       # Core 核心精简版（输出 dist/core）
    npm run publish          # 构建并上传 GitHub Releases
    ```
 4. **运行环境要求**：需预先安装 CLodop 打印服务并确保目标打印机驱动就绪。
 
 > ⚠️ Electron 22 仅支持 Windows 10/11。若需要兼容 Windows 7/8/8.1，请运行 `npm run build:legacy` 并分发 dist/legacy 下的安装包。
-> 如需在低配设备上进一步降低资源占用，可在启动前设置环境变量 `MENUORG_DISABLE_GPU=1`。
+> 可通过环境变量 `MENUORG_DISABLE_AUTO_UPDATE=1` 临时禁用自动更新；`MENUORG_DISABLE_GPU=1` 可切换低资源模式。
+
+## 发布与自动更新
+- 推荐使用 `npm run publish` 一次性生成 Win10/11 安装包（x64/ia32/arm64）以及 Web 安装器，发布前请参考《Release & Update 指南》核对 GitHub Releases 附件。
+- Windows 7/8 需要运行 `npm run build:legacy` 生成兼容包并手动上传到 Release；应用会根据兼容性自动提示改用 legacy 安装包。
+- 核心精简版：运行 `npm run build:core` 生成仅保留登录/配置/自动打印的基础安装包（输出 dist/core，需要手动分发）。
+- 自动更新流程、发布脚本和常见故障排查详见 `docs/RELEASE_AND_UPDATE.md`。
 
 ## 配置与持久化要点
 - `config.json`：保存开机自启、程序已运行提示、打印机偏好等布尔/时间戳字段。
@@ -135,3 +142,8 @@ MenuorgPrint 是一套面向餐饮场景的桌面打印解决方案，基于 Ele
 
 ---
 历史演进与维护记录请参阅 `docs/MAINTENANCE_LOG.md`。
+
+
+
+
+

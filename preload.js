@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   quitAndInstall: () => ipcRenderer.invoke('quit-and-install'),
 
   getCompatibilityInfo: () => ipcRenderer.invoke('get-compatibility-info'),
+  getBuildInfo: () => ipcRenderer.invoke('get-build-info'),
 
   // 中文编码相关API已移除
 

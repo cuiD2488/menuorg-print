@@ -1,0 +1,65 @@
+{
+  "appId": "com.restaurant.orderprinter.core",
+  "productName": "MenuorgPrint Core",
+  "directories": {
+    "output": "dist/core"
+  },
+  "files": [
+    "main.js",
+    "preload.js",
+    "renderer/index.html",
+    "renderer/css/style.css",
+    "renderer/LodopFuncs.js",
+    "renderer/js/app.js",
+    "renderer/js/api.js",
+    "renderer/js/printer.js",
+    "renderer/js/printer-manager.js",
+    "renderer/js/update-manager.js",
+    "renderer/js/websocket-optimized.js",
+    "src/auto-updater.js",
+    "src/enhanced-clodop-manager.js",
+    "src/clodop-connection-manager.js",
+    "src/printer-lodop.js",
+    "src/performance-utils.js",
+    "assets/icon.ico",
+    "!**/*.map",
+    "!docs/**",
+    "!dist/**",
+    "!**/*.log",
+    "!node_modules/.cache/**"
+  ],
+  "asar": true,
+  "compression": "maximum",
+  "npmRebuild": false,
+  "extraMetadata": {
+    "menuorg": {
+      "buildVariant": "core"
+    }
+  },
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64",
+          "ia32"
+        ]
+      }
+    ],
+    "icon": "assets/icon.ico",
+    "requestedExecutionLevel": "asInvoker",
+    "artifactName": "MenuorgPrint-Core-${arch}-${version}.${ext}"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "MenuorgPrint Core",
+    "installerIcon": "assets/icon.ico",
+    "uninstallerIcon": "assets/icon.ico",
+    "allowElevation": true,
+    "runAfterFinish": true
+  }
+}

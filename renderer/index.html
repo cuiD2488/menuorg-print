@@ -94,7 +94,7 @@
               </div>
 
               <!-- 🍽️ 新增：分菜打印配置 -->
-              <div class="dish-print-config">
+              <div class="dish-print-config core-hidden">
                 <h4>🍽️ 分菜打印配置</h4>
 
                 <!-- 分菜模式开关 -->
@@ -144,7 +144,7 @@
               </div>
 
               <!-- 🌍 新增：语言选择配置 -->
-              <div class="language-config">
+              <div class="language-config core-hidden">
                 <h4>🌍 打印语言配置</h4>
 
                 <!-- 语言选择选项 -->
@@ -200,7 +200,7 @@
               </div>
 
               <!-- 🚀 新增：开机自动运行设置 -->
-              <div class="auto-start-config">
+              <div class="auto-start-config core-hidden">
                 <label class="checkbox-label">
                   <input type="checkbox" id="autoStart" />
                   <span class="checkmark"></span>
@@ -220,7 +220,7 @@
                 <span id="wsStatus" class="status-badge status-disconnected"
                   >Disconnected</span
                 >
-                <button id="testWebSocketBtn" class="btn-secondary">
+                <button id="testWebSocketBtn" class="btn-secondary core-hidden">
                   Test Connection
                 </button>
               </div>
@@ -235,7 +235,7 @@
                 <span id="todayOrderCount" class="status-badge">0</span>
               </div>
               <!-- 🍽️ 新增：分菜打印状态 -->
-              <div class="status-item">
+              <div class="status-item core-hidden">
                 <span>分菜打印:</span>
                 <span id="dishPrintStatus" class="status-badge status-disabled"
                   >已禁用</span
@@ -284,7 +284,7 @@
     </div>
 
     <!-- 🍽️ 新增：分菜打印帮助模态框 -->
-    <div id="dishPrintHelpModal" class="modal hidden">
+    <div id="dishPrintHelpModal" class="modal hidden core-hidden">
       <div class="modal-content">
         <div class="modal-header">
           <h3>🍽️ 分菜打印功能说明</h3>

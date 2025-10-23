@@ -31,6 +31,9 @@ class OrderPrintApp {
       criticalThreshold: 200 * 1024 * 1024, // 200MB
     });
 
+    this.coreMode = false;
+    this.buildInfo = { variant: 'full' };
+
     // 监听内存警告
     this.memoryMonitor.on('warning', (data) => {
       console.warn(`[APP] 内存使用警告: ${Math.round(data.usedMB)}MB`);
@@ -101,6 +104,28 @@ class OrderPrintApp {
   }
 
   // 初始化核心组件
+  async loadBuildInfo() {
+    if (!window.electronAPI || !window.electronAPI.getBuildInfo) {
+      return;
+    }
+    try {
+      const info = await window.electronAPI.getBuildInfo();
+      if (info) {
+        this.buildInfo = info;
+        this.coreMode = info.variant === 'core' || info.isCoreBuild === true;
+        window.menuorgBuildInfo = info;
+        window.MENUORG_CORE_MODE = this.coreMode;
+        if (this.coreMode) {
+          document.body.classList.add('core-mode');
+        } else {
+          document.body.classList.remove('core-mode');
+        }
+      }
+    } catch (error) {
+      console.warn('[APP] loadBuildInfo failed:', error);
+    }
+  }
+
   async initCoreComponents() {
     console.log('[APP] 初始化核心组件...');
 
@@ -450,6 +475,8 @@ class OrderPrintApp {
 
     // 使用新的打印系统初始化函数
     await initializePrinterSystem();
+
+    await this.loadBuildInfo();
 
     // 使用优化的事件绑定代替旧的 bindEvents()
     // this.bindEvents();
